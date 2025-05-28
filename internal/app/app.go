@@ -11,11 +11,12 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/config"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/network/router"
+	"github.com/denmor86/ya-gophermart/internal/storage"
 )
 
-func Run(config config.Config) {
+func Run(config config.Config, storage *storage.Database) {
 
-	router := router.NewRouter(config)
+	router := router.NewRouter(config, storage)
 
 	server := &http.Server{
 		Addr:    config.ListenAddr,
