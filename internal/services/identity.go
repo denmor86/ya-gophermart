@@ -3,19 +3,20 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/denmor86/ya-gophermart/internal/config"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
-	"github.com/go-chi/jwtauth"
+	"github.com/go-chi/jwtauth/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Identity struct {
 	JWTAuth *jwtauth.JWTAuth
-	Storage *storage.Database
+	Storage storage.IStorage
 }
 
 var (
@@ -28,17 +29,17 @@ const (
 )
 
 // Создание сервиса
-func NewIdentity(cfg config.Config, storage *storage.Database) *Identity {
+func NewIdentity(cfg config.Config, storage storage.IStorage) *Identity {
 	tokenAuth := jwtauth.New(TokenSecterAlgo, []byte(cfg.JWTSecret), nil)
 	return &Identity{JWTAuth: tokenAuth, Storage: storage}
 }
 
 // Регистрация нового пользователя.
-func (i *Identity) RegisterUser(context context.Context, user models.User) error {
+func (i *Identity) RegisterUser(context context.Context, user models.UserRequest) error {
 	logger.Info("Register user:", user.Login)
 
-	userUUID, _ := i.Storage.GetUserUUID(context, user.Login)
-	if userUUID != "" {
+	userData, _ := i.Storage.GetUser(context, user.Login)
+	if userData != nil {
 		logger.Warn("User already exist")
 		return ErrUserAlreadyExists
 	}
@@ -58,16 +59,16 @@ func (i *Identity) RegisterUser(context context.Context, user models.User) error
 }
 
 // Аутентификация пользователя
-func (s *Identity) AuthenticateUser(context context.Context, user models.User) (bool, error) {
+func (s *Identity) AuthenticateUser(context context.Context, user models.UserRequest) (bool, error) {
 	logger.Info("Authenticate user", user.Login)
 
-	password, err := s.Storage.GetUserPassword(context, user.Login)
+	userData, err := s.Storage.GetUser(context, user.Login)
 	if err != nil {
 		logger.Error("Error getting user password", err)
 		return false, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(password), []byte(user.Password))
+	err = bcrypt.CompareHashAndPassword([]byte(userData.PasswordHash), []byte(user.Password))
 	if err != nil {
 		logger.Warn("Invalid password", user.Login)
 		return false, nil
@@ -91,4 +92,15 @@ func (i *Identity) GenerateJWT(username string) (string, error) {
 // Возвращаем указатель на JWTAuth (chi)
 func (i *Identity) GetTokenAuth() *jwtauth.JWTAuth {
 	return i.JWTAuth
+}
+
+// GetUsername - извлекает имя пользователя из контекста JWT токена
+func GetUsername(context context.Context) (string, error) {
+	_, claims, _ := jwtauth.FromContext(context)
+	login, ok := claims["username"].(string)
+	if !ok {
+		logger.Warn("undefined username from token")
+		return "", fmt.Errorf("undefined username")
+	}
+	return login, nil
 }

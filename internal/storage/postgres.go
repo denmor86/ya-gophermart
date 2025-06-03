@@ -6,28 +6,27 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 )
-
-type UniqueViolation struct {
-	Message string
-	Login   string
-}
-
-func (e *UniqueViolation) Error() string {
-	return e.Message
-}
 
 type Database struct {
 	Pool   *pgxpool.Pool
 	Config *pgx.ConnConfig
 	DSN    string
 }
+
+var (
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
+)
 
 const (
 	CheckExist     = `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname =$1)`
@@ -36,8 +35,12 @@ const (
 						VALUES ($1, $2, $3) 
 						ON CONFLICT (login) DO NOTHING
 						RETURNING login;`
-	GetUserUUID     = `SELECT uuid FROM USERS WHERE login =$1;`
-	GetUserPassword = `SELECT password FROM USERS WHERE login =$1;`
+	GetUser     = `SELECT uuid, password, login FROM USERS WHERE login =$1;`
+	GetOrder    = `SELECT user_uuid, status, uploaded_at, accrual, is_processing FROM ORDERS WHERE number =$1;`
+	InsertOrder = `INSERT INTO ORDERS (number, user_uuid, status, uploaded_at, accrual, is_processing) 
+						VALUES ($1, $2, $3, $4, $5, $6) 
+						ON CONFLICT (number) DO NOTHING
+						RETURNING number;`
 )
 
 // Создание хранилища
@@ -122,46 +125,96 @@ func (s *Database) CreateDatabase(ctx context.Context) error {
 	return nil
 }
 
-func (s *Database) GetUserUUID(ctx context.Context, login string) (string, error) {
-
-	var userUUID string
-	err := s.Pool.QueryRow(ctx, GetUserUUID, login).Scan(&userUUID)
+func (s *Database) GetUser(ctx context.Context, login string) (*models.UserData, error) {
+	var (
+		userUUID string
+		password string
+		dbLogin  string
+	)
+	err := s.Pool.QueryRow(ctx, GetUser, login).Scan(&userUUID, &password, &dbLogin)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return "", fmt.Errorf("user not found: %s", login)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
 		}
-		return "", fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
-	return userUUID, nil
+
+	return &models.UserData{
+		UserUUID:     userUUID,
+		Login:        dbLogin,
+		PasswordHash: password,
+	}, nil
 }
 
-func (s *Database) GetUserPassword(ctx context.Context, login string) (string, error) {
-
-	var password string
-	err := s.Pool.QueryRow(ctx, GetUserPassword, login).Scan(&password)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return "", fmt.Errorf("user not found: %s", login)
-		}
-		return "", fmt.Errorf("failed to get user: %w", err)
-	}
-	return password, nil
-}
 func (s *Database) AddUser(ctx context.Context, login string, password string) error {
-
 	var prevLogin string
 	userUUID := uuid.New().String()
+
 	err := s.Pool.QueryRow(ctx, InsertUser, userUUID, login, password).Scan(&prevLogin)
-	// добавили в базу, совпадений нет
+
+	// Успешное добавление
 	if err == nil {
 		return nil
 	}
-	// ошибка добавления строки
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("failed to add user: %w", err)
+
+	// Проверяем именно нарушение уникальности (код 23505)
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return ErrAlreadyExists
 	}
-	// есть совпадение пользователя
-	return &UniqueViolation{Message: "User already exists", Login: prevLogin}
+
+	// Все остальные ошибки
+	return fmt.Errorf("failed to add user: %w", err)
+}
+
+func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderData, error) {
+	var (
+		userUUID     string
+		status       string
+		uploadedAt   time.Time
+		accrual      int32
+		isProcessing bool
+	)
+
+	err := s.Pool.QueryRow(ctx, GetOrder, number).Scan(
+		&userUUID,
+		&status,
+		&uploadedAt,
+		&accrual,
+		&isProcessing,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to get order: %w", err)
+	}
+
+	return &models.OrderData{
+		UserUUID:     userUUID,
+		Status:       status,
+		UploadedAt:   uploadedAt,
+		Accrual:      accrual,
+		IsProcessing: isProcessing,
+	}, nil
+}
+func (s *Database) AddOrder(ctx context.Context, number string, userUUID string, uploadedAt time.Time) error {
+	var prevNumber string
+	err := s.Pool.QueryRow(ctx, InsertOrder, number, userUUID, models.OrderStatusNew, uploadedAt, 0, false).Scan(&prevNumber)
+
+	if err == nil {
+		return nil
+	}
+
+	// Проверяем именно нарушение уникальности
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return ErrAlreadyExists
+	}
+
+	// Все остальные ошибки
+	return fmt.Errorf("failed to add order: %w", err)
 }
 
 func (s *Database) Ping(ctx context.Context) error {

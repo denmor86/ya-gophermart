@@ -14,7 +14,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/storage"
 )
 
-func Run(config config.Config, storage *storage.Database) {
+func Run(config config.Config, storage storage.IStorage) {
 
 	router := router.NewRouter(config, storage)
 

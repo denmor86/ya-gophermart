@@ -14,7 +14,7 @@ import (
 func RegisterUserHandler(i *services.Identity) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		var user models.User
+		var user models.UserRequest
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			logger.Error("Failed to decode request", err)
 			http.Error(w, "Invalid request format", http.StatusBadRequest)
@@ -53,7 +53,7 @@ func RegisterUserHandler(i *services.Identity) http.HandlerFunc {
 func AuthenticateUserHandle(i *services.Identity) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		var user models.User
+		var user models.UserRequest
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 			logger.Error("Failed to decode request", err)
 			http.Error(w, "Invalid request format", http.StatusBadRequest)
