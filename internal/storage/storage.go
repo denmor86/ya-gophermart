@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/denmor86/ya-gophermart/internal/models"
@@ -16,3 +17,8 @@ type IStorage interface {
 	Ping(ctx context.Context) error
 	Close() error
 }
+
+var (
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
+)

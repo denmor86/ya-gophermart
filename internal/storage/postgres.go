@@ -23,11 +23,6 @@ type Database struct {
 	DSN    string
 }
 
-var (
-	ErrNotFound      = errors.New("not found")
-	ErrAlreadyExists = errors.New("already exists")
-)
-
 const (
 	CheckExist     = `SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname =$1)`
 	CreateDatabase = `CREATE DATABASE %s`
@@ -145,7 +140,7 @@ func (s *Database) GetUser(ctx context.Context, login string) (*models.UserData,
 	err := s.Pool.QueryRow(ctx, GetUser, login).Scan(&userUUID, &password, &dbLogin)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, fmt.Errorf("user %w", ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}

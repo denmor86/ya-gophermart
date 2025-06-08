@@ -37,17 +37,17 @@ func TestNewAccrualService(t *testing.T) {
 
 	baseService, ok := service.(*Accrual)
 	if !ok {
-		t.Fatalf("Expected *RealAccrualService, got %T", service)
+		t.Fatalf("Expected *Accrual, got '%T'", service)
 	}
 	// проверка адреса сервиса
 	if baseService.AccrualAddr != config.AccrualAddr {
-		t.Errorf("Expected accrual address %v, got %v", baseService.AccrualAddr, config.AccrualAddr)
+		t.Errorf("Expected accrual address: '%v', got: '%v'", baseService.AccrualAddr, config.AccrualAddr)
 	}
 	// Проверка лимитера
 	if baseService.Limiter == nil {
 		t.Error("Expected limiter to be initialized")
 	} else if baseService.Limiter.Limit() != rate.Inf {
-		t.Errorf("Expected limiter limit to be rate.Inf, got %v", baseService.Limiter.Limit())
+		t.Errorf("Expected limiter limit to be rate.Inf, got: '%v'", baseService.Limiter.Limit())
 	}
 }
 
