@@ -14,11 +14,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Identity struct {
-	JWTAuth *jwtauth.JWTAuth
-	Storage storage.IStorage
-}
-
 var (
 	ErrUserAlreadyExists = errors.New("user already exists")
 )
@@ -28,8 +23,20 @@ const (
 	TokenExpirationTime = 24 * time.Hour
 )
 
+type IdentityService interface {
+	RegisterUser(context context.Context, user models.UserRequest) error
+	AuthenticateUser(context context.Context, user models.UserRequest) (bool, error)
+	GenerateJWT(username string) (string, error)
+	GetTokenAuth() *jwtauth.JWTAuth
+}
+
+type Identity struct {
+	JWTAuth *jwtauth.JWTAuth
+	Storage storage.IStorage
+}
+
 // Создание сервиса
-func NewIdentity(cfg config.Config, storage storage.IStorage) *Identity {
+func NewIdentity(cfg config.Config, storage storage.IStorage) IdentityService {
 	tokenAuth := jwtauth.New(TokenSecterAlgo, []byte(cfg.JWTSecret), nil)
 	return &Identity{JWTAuth: tokenAuth, Storage: storage}
 }

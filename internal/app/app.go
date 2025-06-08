@@ -12,6 +12,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/network/router"
 	"github.com/denmor86/ya-gophermart/internal/storage"
+	"github.com/denmor86/ya-gophermart/internal/worker"
 )
 
 func Run(config config.Config, storage storage.IStorage) {
@@ -22,6 +23,11 @@ func Run(config config.Config, storage storage.IStorage) {
 		Addr:    config.ListenAddr,
 		Handler: router.HandleRouter(),
 	}
+	// Создание и запуск воркера
+	worker := worker.NewOrderWorker(router.Orders)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	worker.Start(ctx)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
@@ -37,9 +43,11 @@ func Run(config config.Config, storage storage.IStorage) {
 
 	<-stop
 	logger.Info("Shutdown server")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	worker.Stop()
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("error shutdown server", err.Error())
 	}
 	logger.Info("Server stopped")

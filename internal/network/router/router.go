@@ -13,8 +13,8 @@ import (
 
 type Router struct {
 	Config    config.Config
-	Indentity *services.Identity
-	Orders    *services.Orders
+	Indentity services.IdentityService
+	Orders    services.OrdersService
 }
 
 func NewRouter(config config.Config, storage storage.IStorage) *Router {

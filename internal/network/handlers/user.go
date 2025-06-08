@@ -11,7 +11,7 @@ import (
 )
 
 // RegisterUserHandler — регистрация нового пользователя
-func RegisterUserHandler(i *services.Identity) http.HandlerFunc {
+func RegisterUserHandler(i services.IdentityService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
 		var user models.UserRequest
@@ -50,7 +50,7 @@ func RegisterUserHandler(i *services.Identity) http.HandlerFunc {
 }
 
 // AuthenticateUserHandle — аутентификация пользователя
-func AuthenticateUserHandle(i *services.Identity) http.HandlerFunc {
+func AuthenticateUserHandle(i services.IdentityService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
 		var user models.UserRequest

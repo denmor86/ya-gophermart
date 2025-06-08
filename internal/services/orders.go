@@ -10,10 +10,6 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/storage"
 )
 
-type Orders struct {
-	Storage storage.IStorage
-}
-
 var (
 	ErrOrderAlreadyExists     = errors.New("order already exists")
 	ErrOrderAlreadyUploaded   = errors.New("order already uploaded by this user")
@@ -21,21 +17,32 @@ var (
 	ErrOrderUploadedByAnother = errors.New("order already uploaded by another user")
 )
 
+// OrdersService - представляет интерфейс для работы с сервисом заказов
+type OrdersService interface {
+	AddOrder(ctx context.Context, login string, number string) error
+	GetProcessingOrders(ctx context.Context, count int) ([]string, error)
+	ProcessOrder(ctx context.Context, number string) error
+}
+
+type Orders struct {
+	Storage storage.IStorage
+}
+
 // Создание сервиса
-func NewOrders(storage storage.IStorage) *Orders {
+func NewOrders(storage storage.IStorage) OrdersService {
 	return &Orders{Storage: storage}
 }
 
 // AddOrder - добавляет новый заказ, проверяя, не был ли он уже добавлен другим пользователем.
-func (s *Orders) AddOrder(context context.Context, login string, number string) error {
+func (s *Orders) AddOrder(ctx context.Context, login string, number string) error {
 	// Получаем пользователя по логину
-	user, err := s.Storage.GetUser(context, login)
+	user, err := s.Storage.GetUser(ctx, login)
 	if err != nil {
 		return err
 	}
 
 	// Проверяем, был ли уже добавлен заказ с таким номером
-	existingOrder, err := s.Storage.GetOrder(context, number)
+	existingOrder, err := s.Storage.GetOrder(ctx, number)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
@@ -50,10 +57,19 @@ func (s *Orders) AddOrder(context context.Context, login string, number string) 
 	}
 
 	// Добавление заказа
-	err = s.Storage.AddOrder(context, number, user.UserUUID, time.Now())
+	err = s.Storage.AddOrder(ctx, number, user.UserUUID, time.Now())
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+func (s *Orders) GetProcessingOrders(ctx context.Context, count int) ([]string, error) {
+	return s.Storage.GetProcessingOrders(ctx, count)
+}
+
+// ProcessOrder - обработка заказа, запрос начисления вознаграждений
+func (s *Orders) ProcessOrder(ctx context.Context, number string) error {
 
 	return nil
 }

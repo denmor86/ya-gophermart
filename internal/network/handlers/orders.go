@@ -11,7 +11,7 @@ import (
 )
 
 // NewOrdersHandler — покупка пользователя
-func NewOrdersHandler(s *services.Orders) http.HandlerFunc {
+func NewOrdersHandler(s services.OrdersService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
 		username, err := services.GetUsername(r.Context())
@@ -33,6 +33,12 @@ func NewOrdersHandler(s *services.Orders) http.HandlerFunc {
 		}()
 
 		orderNumber := strings.TrimSpace(string(body))
+
+		if !services.CheckNumber(orderNumber) {
+			logger.Warn("Invalid order number format", orderNumber)
+			http.Error(w, "Invalid order number format", http.StatusUnprocessableEntity)
+			return
+		}
 
 		err = s.AddOrder(r.Context(), username, orderNumber)
 		if err != nil {

@@ -41,6 +41,17 @@ const (
 						VALUES ($1, $2, $3, $4, $5, $6) 
 						ON CONFLICT (number) DO NOTHING
 						RETURNING number;`
+
+	GetProcessingOrders = `UPDATE ORDERS 
+							SET status = 'PROCESSING'
+							WHERE number IN (
+								SELECT number FROM ORDERS 
+								WHERE status = 'NEW'
+								ORDER BY uploaded_at 
+								LIMIT $1
+								FOR UPDATE SKIP LOCKED
+							)
+							RETURNING number`
 )
 
 // Создание хранилища
@@ -199,6 +210,26 @@ func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderDa
 		IsProcessing: isProcessing,
 	}, nil
 }
+
+func (s *Database) GetProcessingOrders(ctx context.Context, count int) ([]string, error) {
+
+	var numbers []string
+	rows, err := s.Pool.Query(ctx, GetProcessingOrders, count)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get processing orders: %w", err)
+	}
+	for rows.Next() {
+
+		var orderNumber string
+		err := rows.Scan(&orderNumber)
+		if err != nil {
+			return numbers, fmt.Errorf("failed scan number for processing numbers: %w", err)
+		}
+		numbers = append(numbers, orderNumber)
+	}
+	return numbers, err
+}
+
 func (s *Database) AddOrder(ctx context.Context, number string, userUUID string, uploadedAt time.Time) error {
 	var prevNumber string
 	err := s.Pool.QueryRow(ctx, InsertOrder, number, userUUID, models.OrderStatusNew, uploadedAt, 0, false).Scan(&prevNumber)
