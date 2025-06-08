@@ -54,7 +54,7 @@ func TestNewAccrualService(t *testing.T) {
 func TestGetOrderAccrual(t *testing.T) {
 	testCases := []testCase{
 		{
-			TestName:        "Order processed #1",
+			TestName:        "Success. Order processed #1",
 			OrderNumber:     "123456",
 			StatusCode:      http.StatusOK,
 			Response:        `{"order":"123456","status":"PROCESSED","accrual":100.5}`,
@@ -63,7 +63,7 @@ func TestGetOrderAccrual(t *testing.T) {
 			ExpectedError:   nil,
 		},
 		{
-			TestName:        "Order not found #2",
+			TestName:        "Success. Order not found #2",
 			OrderNumber:     "000000",
 			StatusCode:      http.StatusNoContent,
 			Response:        "",
@@ -72,7 +72,7 @@ func TestGetOrderAccrual(t *testing.T) {
 			ExpectedError:   nil,
 		},
 		{
-			TestName:        "Too many requests #3",
+			TestName:        "Error. Too many requests #3",
 			OrderNumber:     "654321",
 			StatusCode:      http.StatusTooManyRequests,
 			Response:        "",
@@ -81,7 +81,7 @@ func TestGetOrderAccrual(t *testing.T) {
 			ExpectedError:   nil,
 		},
 		{
-			TestName:        "Accrual service error #4",
+			TestName:        "Error. Accrual service error #4",
 			OrderNumber:     "123123",
 			StatusCode:      http.StatusInternalServerError,
 			Response:        "",
@@ -90,7 +90,7 @@ func TestGetOrderAccrual(t *testing.T) {
 			ExpectedError:   ErrAccrualServiceUnavailable,
 		},
 		{
-			TestName:        "Invalid order status #5",
+			TestName:        "Error. Invalid order status #5",
 			OrderNumber:     "999999",
 			StatusCode:      http.StatusOK,
 			Response:        `{"order":"999999","status":"UNKNOWN","accrual":50.0}`,
@@ -99,14 +99,14 @@ func TestGetOrderAccrual(t *testing.T) {
 			ExpectedError:   errors.New("undefined status request UNKNOWN"),
 		},
 		{
-			TestName:        "Failed create request #6",
+			TestName:        "Error. Failed create request #6",
 			OrderNumber:     "\x7f",
 			ExpectedAccrual: 0,
 			ExpectedStatus:  "",
 			ExpectedError:   errors.New("failed to create new request"),
 		},
 		{
-			TestName:        "Failed decode response #7",
+			TestName:        "Error. Failed decode response #7",
 			OrderNumber:     "invalid",
 			StatusCode:      http.StatusOK,
 			Response:        `{"order":"123456","status":123}`,
@@ -115,7 +115,7 @@ func TestGetOrderAccrual(t *testing.T) {
 			ExpectedError:   errors.New("failed decode JSON response"),
 		},
 		{
-			TestName:        "Invalid URL request #8",
+			TestName:        "Error. Invalid URL request #8",
 			OrderNumber:     "failure",
 			StatusCode:      http.StatusNotFound,
 			ExpectedAccrual: 0,

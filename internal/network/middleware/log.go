@@ -8,13 +8,13 @@ import (
 )
 
 type (
-	// берём структуру для хранения сведений об ответе
+	// Cтруктура для хранения сведений об ответе
 	ResponseData struct {
 		status int
 		size   int
 	}
 
-	// добавляем реализацию http.ResponseWriter
+	// Реализация http.ResponseWriter
 	LoggingResponseWriter struct {
 		http.ResponseWriter // встраиваем оригинальный http.ResponseWriter
 		responseData        *ResponseData

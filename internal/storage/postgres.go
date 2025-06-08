@@ -30,23 +30,23 @@ const (
 						VALUES ($1, $2, $3) 
 						ON CONFLICT (login) DO NOTHING
 						RETURNING login;`
-	GetUser     = `SELECT uuid, password, login FROM USERS WHERE login =$1;`
-	GetOrder    = `SELECT user_uuid, status, uploaded_at, accrual, is_processing FROM ORDERS WHERE number =$1;`
+	GetUser     = `SELECT uuid, password, login FROM USERS WHERE login=$1;`
+	GetOrder    = `SELECT user_uuid, status, uploaded_at, accrual, is_processing FROM ORDERS WHERE number=$1;`
 	InsertOrder = `INSERT INTO ORDERS (number, user_uuid, status, uploaded_at, accrual, is_processing) 
 						VALUES ($1, $2, $3, $4, $5, $6) 
 						ON CONFLICT (number) DO NOTHING
 						RETURNING number;`
-
-	GetProcessingOrders = `UPDATE ORDERS 
-							SET status = 'PROCESSING'
-							WHERE number IN (
-								SELECT number FROM ORDERS 
-								WHERE status = 'NEW'
-								ORDER BY uploaded_at 
-								LIMIT $1
-								FOR UPDATE SKIP LOCKED
-							)
-							RETURNING number`
+	GetOrders                = `SELECT user_uuid, status, uploaded_at, accrual, is_processing FROM ORDERS WHERE user_uuid=$1;`
+	ClaimOrdersForProcessing = `UPDATE ORDERS 
+								SET status = 'PROCESSING'
+								WHERE number IN (
+									SELECT number FROM ORDERS 
+									WHERE status = 'NEW'
+									ORDER BY uploaded_at 
+									LIMIT $1
+									FOR UPDATE SKIP LOCKED
+								)
+								RETURNING number`
 )
 
 // Создание хранилища
@@ -178,7 +178,7 @@ func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderDa
 		userUUID     string
 		status       string
 		uploadedAt   time.Time
-		accrual      int32
+		accrual      float64
 		isProcessing bool
 	)
 
@@ -192,7 +192,7 @@ func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderDa
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, fmt.Errorf("order %w", ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to get order: %w", err)
 	}
@@ -206,10 +206,44 @@ func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderDa
 	}, nil
 }
 
-func (s *Database) GetProcessingOrders(ctx context.Context, count int) ([]string, error) {
+func (s *Database) GetOrders(ctx context.Context, userUUID string) ([]models.OrderData, error) {
+	var orders []models.OrderData
+	rows, err := s.Pool.Query(ctx, GetOrders, userUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders: %w", err)
+	}
+	for rows.Next() {
+		var (
+			userUUID     string
+			status       string
+			uploadedAt   time.Time
+			accrual      float64
+			isProcessing bool
+		)
+		err := rows.Scan(
+			&userUUID,
+			&status,
+			&uploadedAt,
+			&accrual,
+			&isProcessing,
+		)
+		if err != nil {
+			return orders, fmt.Errorf("failed scan order data: %w", err)
+		}
+		orders = append(orders, models.OrderData{
+			UserUUID:     userUUID,
+			Status:       status,
+			UploadedAt:   uploadedAt,
+			Accrual:      accrual,
+			IsProcessing: isProcessing})
+	}
+	return orders, err
+}
+
+func (s *Database) ClaimOrdersForProcessing(ctx context.Context, count int) ([]string, error) {
 
 	var numbers []string
-	rows, err := s.Pool.Query(ctx, GetProcessingOrders, count)
+	rows, err := s.Pool.Query(ctx, ClaimOrdersForProcessing, count)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get processing orders: %w", err)
 	}

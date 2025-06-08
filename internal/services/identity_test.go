@@ -18,7 +18,7 @@ import (
 )
 
 func TestNewIdentityService(t *testing.T) {
-	t.Run("Identity_CreatesService", func(t *testing.T) {
+	t.Run("Identity. CreatesService", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		mockUserRepo := mocks.NewMockIStorage(ctrl)
@@ -49,56 +49,56 @@ func TestRegisterUser(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name          string
-		setupMocks    func()
-		expectedError error
-		user          models.UserRequest
+		TestName      string
+		SetupMocks    func()
+		ExpectedError error
+		User          models.UserRequest
 	}{
 		{
-			name: "Register User: Success #1",
-			setupMocks: func() {
+			TestName: "Success. Register user #1",
+			SetupMocks: func() {
 				mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, nil)
 				mockStorage.EXPECT().AddUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
-			expectedError: nil,
-			user:          models.UserRequest{Login: "mda", Password: "test_pass"},
+			ExpectedError: nil,
+			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 		},
 		{
-			name: "Register User: ErrUserAlreadyExists #2",
-			setupMocks: func() {
+			TestName: "Error. Register user already exists #2",
+			SetupMocks: func() {
 				mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(&models.UserData{Login: "mda"}, nil)
 			},
-			expectedError: ErrUserAlreadyExists,
-			user:          models.UserRequest{Login: "mda", Password: "test_pass"},
+			ExpectedError: ErrUserAlreadyExists,
+			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 		},
 		{
-			name: "Register User: Undefined error #2",
-			setupMocks: func() {
+			TestName: "Error. Register user undefined error #3",
+			SetupMocks: func() {
 				mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, nil)
 				mockStorage.EXPECT().AddUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("failed to add user"))
 			},
-			expectedError: errors.New("failed to add user"),
-			user:          models.UserRequest{Login: "mda", Password: "test_pass"},
+			ExpectedError: errors.New("failed to add user"),
+			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			tc.setupMocks()
+		t.Run(tc.TestName, func(t *testing.T) {
+			tc.SetupMocks()
 
 			identity := NewIdentity(config, mockStorage)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
-			err := identity.RegisterUser(ctx, tc.user)
+			err := identity.RegisterUser(ctx, tc.User)
 
-			if err != nil && tc.expectedError == nil {
+			if err != nil && tc.ExpectedError == nil {
 				t.Errorf("Expected no error, got: '%v'", err)
-			} else if err == nil && tc.expectedError != nil {
+			} else if err == nil && tc.ExpectedError != nil {
 				t.Errorf("Expected error, got none")
-			} else if err != nil && err.Error() != tc.expectedError.Error() {
-				t.Errorf("Expected error: '%v', got: '%v'", tc.expectedError, err)
+			} else if err != nil && err.Error() != tc.ExpectedError.Error() {
+				t.Errorf("Expected error: '%v', got: '%v'", tc.ExpectedError, err)
 			}
 		})
 	}
@@ -116,43 +116,43 @@ func TestAuthenticateUser(t *testing.T) {
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte("test_pass"), bcrypt.DefaultCost)
 
 	testCases := []struct {
-		name          string
+		TestName      string
 		mockReturn    func(ctx context.Context, login string) (*models.UserData, error)
-		user          models.UserRequest
+		User          models.UserRequest
 		expectedAuth  bool
-		expectedError error
+		ExpectedError error
 	}{
 		{
-			name: "AuthenticateUser Success #1",
+			TestName: "AuthenticateUser Success #1",
 			mockReturn: func(ctx context.Context, login string) (*models.UserData, error) {
 				return &models.UserData{UserUUID: "1", Login: "mda", PasswordHash: string(passwordHash)}, nil
 			},
-			user:          models.UserRequest{Login: "mda", Password: "test_pass"},
+			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 			expectedAuth:  true,
-			expectedError: nil,
+			ExpectedError: nil,
 		},
 		{
-			name: "AuthenticateUser UserNotFound #2",
+			TestName: "AuthenticateUser UserNotFound #2",
 			mockReturn: func(ctx context.Context, login string) (*models.UserData, error) {
-				return nil, fmt.Errorf("user %w", storage.ErrNotFound)
+				return nil, fmt.Errorf("User %w", storage.ErrNotFound)
 			},
-			user:          models.UserRequest{Login: "mda", Password: "test_pass"},
+			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 			expectedAuth:  false,
-			expectedError: errors.New("user not found"),
+			ExpectedError: errors.New("User not found"),
 		},
 		{
-			name: "AuthenticateUser InvalidPassword #3",
+			TestName: "AuthenticateUser InvalidPassword #3",
 			mockReturn: func(ctx context.Context, login string) (*models.UserData, error) {
 				return &models.UserData{UserUUID: "1", Login: "mda", PasswordHash: string("test_pass")}, nil
 			},
-			user:          models.UserRequest{Login: "mda", Password: "test_pass"},
+			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 			expectedAuth:  false,
-			expectedError: nil,
+			ExpectedError: nil,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.TestName, func(t *testing.T) {
 			mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).DoAndReturn(tc.mockReturn)
 
 			identity := NewIdentity(config, mockStorage)
@@ -160,18 +160,18 @@ func TestAuthenticateUser(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 
-			authenticated, err := identity.AuthenticateUser(ctx, tc.user)
+			authenticated, err := identity.AuthenticateUser(ctx, tc.User)
 
 			if authenticated != tc.expectedAuth {
 				t.Errorf("Expected authenticated %v, got %v", tc.expectedAuth, authenticated)
 			}
 
-			if err != nil && tc.expectedError == nil {
+			if err != nil && tc.ExpectedError == nil {
 				t.Errorf("Expected no error, got: '%v'", err)
-			} else if err == nil && tc.expectedError != nil {
+			} else if err == nil && tc.ExpectedError != nil {
 				t.Errorf("Expected error, got none")
-			} else if err != nil && err.Error() != tc.expectedError.Error() {
-				t.Errorf("Expected error: '%v', got: '%v'", tc.expectedError, err)
+			} else if err != nil && err.Error() != tc.ExpectedError.Error() {
+				t.Errorf("Expected error: '%v', got: '%v'", tc.ExpectedError, err)
 			}
 		})
 	}

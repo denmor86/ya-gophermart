@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
 )
 
@@ -20,7 +21,8 @@ var (
 // OrdersService - представляет интерфейс для работы с сервисом заказов
 type OrdersService interface {
 	AddOrder(ctx context.Context, login string, number string) error
-	GetProcessingOrders(ctx context.Context, count int) ([]string, error)
+	GetOrders(ctx context.Context, login string) ([]models.OrderData, error)
+	ClaimOrdersForProcessing(ctx context.Context, count int) ([]string, error)
 	ProcessOrder(ctx context.Context, number string) error
 }
 
@@ -64,8 +66,25 @@ func (s *Orders) AddOrder(ctx context.Context, login string, number string) erro
 
 	return nil
 }
-func (s *Orders) GetProcessingOrders(ctx context.Context, count int) ([]string, error) {
-	return s.Storage.GetProcessingOrders(ctx, count)
+
+// GetOrders - возвращает список заказов пользователя.
+func (s *Orders) GetOrders(ctx context.Context, login string) ([]models.OrderData, error) {
+	user, err := s.Storage.GetUser(ctx, login)
+	if err != nil {
+		return nil, err
+	}
+
+	orders, err := s.Storage.GetOrders(ctx, user.UserUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+// ClaimOrdersForProcessing - сформировать список номеров заказов из находящихся в статусе 'NEW' и установить им статус 'PROCESSING'
+func (s *Orders) ClaimOrdersForProcessing(ctx context.Context, count int) ([]string, error) {
+	return s.Storage.ClaimOrdersForProcessing(ctx, count)
 }
 
 // ProcessOrder - обработка заказа, запрос начисления вознаграждений

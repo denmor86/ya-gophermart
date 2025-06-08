@@ -70,6 +70,21 @@ func (mr *MockIStorageMockRecorder) AddUser(ctx, login, password any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddUser", reflect.TypeOf((*MockIStorage)(nil).AddUser), ctx, login, password)
 }
 
+// ClaimOrdersForProcessing mocks base method.
+func (m *MockIStorage) ClaimOrdersForProcessing(ctx context.Context, count int) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ClaimOrdersForProcessing", ctx, count)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ClaimOrdersForProcessing indicates an expected call of ClaimOrdersForProcessing.
+func (mr *MockIStorageMockRecorder) ClaimOrdersForProcessing(ctx, count any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimOrdersForProcessing", reflect.TypeOf((*MockIStorage)(nil).ClaimOrdersForProcessing), ctx, count)
+}
+
 // Close mocks base method.
 func (m *MockIStorage) Close() error {
 	m.ctrl.T.Helper()
@@ -99,19 +114,19 @@ func (mr *MockIStorageMockRecorder) GetOrder(ctx, number any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrder", reflect.TypeOf((*MockIStorage)(nil).GetOrder), ctx, number)
 }
 
-// GetProcessingOrders mocks base method.
-func (m *MockIStorage) GetProcessingOrders(ctx context.Context, count int) ([]string, error) {
+// GetOrders mocks base method.
+func (m *MockIStorage) GetOrders(ctx context.Context, userUUID string) ([]models.OrderData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProcessingOrders", ctx, count)
-	ret0, _ := ret[0].([]string)
+	ret := m.ctrl.Call(m, "GetOrders", ctx, userUUID)
+	ret0, _ := ret[0].([]models.OrderData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetProcessingOrders indicates an expected call of GetProcessingOrders.
-func (mr *MockIStorageMockRecorder) GetProcessingOrders(ctx, count any) *gomock.Call {
+// GetOrders indicates an expected call of GetOrders.
+func (mr *MockIStorageMockRecorder) GetOrders(ctx, userUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProcessingOrders", reflect.TypeOf((*MockIStorage)(nil).GetProcessingOrders), ctx, count)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrders", reflect.TypeOf((*MockIStorage)(nil).GetOrders), ctx, userUUID)
 }
 
 // GetUser mocks base method.

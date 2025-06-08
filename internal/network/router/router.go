@@ -7,6 +7,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/services"
 	"github.com/denmor86/ya-gophermart/internal/storage"
 	"github.com/go-chi/chi/v5"
+	chi_middleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/go-chi/jwtauth/v5"
 )
@@ -27,7 +28,7 @@ func NewRouter(config config.Config, storage storage.IStorage) *Router {
 
 func (router *Router) HandleRouter() chi.Router {
 	ja := router.Indentity.GetTokenAuth()
-	//compressMiddleware := middleware.Compress(5, "gzip", "deflate")
+	compressMiddleware := chi_middleware.Compress(5, "gzip", "deflate")
 	r := chi.NewRouter()
 	r.Route("/api", func(r chi.Router) {
 		r.Use(middleware.LogHandle)
@@ -37,7 +38,8 @@ func (router *Router) HandleRouter() chi.Router {
 			r.Group(func(r chi.Router) {
 				r.Use(jwtauth.Verifier(ja))
 				r.Use(jwtauth.Authenticator(ja))
-				r.Post("/orders", handlers.NewOrdersHandler(router.Orders))
+				r.Post("/orders", handlers.OrdersHandler(router.Orders))
+				r.With(compressMiddleware).Get("/orders", handlers.GetOrdersHandler(router.Orders))
 			})
 		})
 	})

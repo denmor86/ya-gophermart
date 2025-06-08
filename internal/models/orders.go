@@ -13,10 +13,10 @@ const (
 
 // OrderResponse - модель заказа пользователя для выдачи
 type OrderResponse struct {
-	Number     string `json:"number"`
-	Status     string `json:"status"`
-	Accrual    int32  `json:"accrual"`
-	UploadedAt string `json:"uploaded_at"`
+	Number     string  `json:"number"`
+	Status     string  `json:"status"`
+	Accrual    float64 `json:"accrual"`
+	UploadedAt string  `json:"uploaded_at"`
 }
 
 // Order - модель заказа пользователя
@@ -24,7 +24,7 @@ type OrderData struct {
 	Number       string
 	UserUUID     string
 	Status       string
-	Accrual      int32
+	Accrual      float64
 	UploadedAt   time.Time
 	IsProcessing bool
 }

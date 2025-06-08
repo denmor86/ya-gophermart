@@ -82,7 +82,7 @@ func (w *OrderWorker) ProcessOrder(ctx context.Context) {
 		return
 	}
 
-	orderNumbers, err := w.Orders.GetProcessingOrders(ctx, w.BatchSize)
+	orderNumbers, err := w.Orders.ClaimOrdersForProcessing(ctx, w.BatchSize)
 
 	if err != nil {
 		logger.Error("error get orders for processing", err)
