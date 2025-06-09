@@ -32,22 +32,22 @@ const (
 						RETURNING login;`
 	GetUser     = `SELECT uuid, password, login FROM USERS WHERE login=$1;`
 	GetOrder    = `SELECT user_uuid, status, created_at, accrual FROM ORDERS WHERE number=$1;`
-	InsertOrder = `INSERT INTO ORDERS (number, user_uuid, status, created_at, accrual, is_processing) 
-						VALUES ($1, $2, $3, $4, $5, $6) 
+	InsertOrder = `INSERT INTO ORDERS (number, user_uuid, status, accrual, retry_count, created_at, updated_at) 
+						VALUES ($1, $2, $3, $4, $5, $6, $7) 
 						ON CONFLICT (number) DO NOTHING
 						RETURNING number;`
 	GetOrders                = `SELECT user_uuid, status, created_at, accrual FROM ORDERS WHERE user_uuid=$1;`
 	ClaimOrdersForProcessing = `UPDATE ORDERS 
-									SET status = 'PROCESSING'
-									    retry_count = retry_count + 1,
-			                   	     updated_at = NOW()
-									WHERE number IN (
-										SELECT number FROM ORDERS 
-										WHERE status = 'NEW' OR status = 'REGISTERED' OR (status = 'PROCESSING' AND retry_count < 3)
-										ORDER BY created_at 
-										LIMIT $1
-										FOR UPDATE SKIP LOCKED
-									)
+								SET status = 'PROCESSING',
+								    retry_count = retry_count + 1,
+								    updated_at = NOW()
+								WHERE number IN (
+								    SELECT number FROM ORDERS 
+								    WHERE status = 'NEW' OR status = 'REGISTERED' OR (status = 'PROCESSING' AND retry_count < 3)
+								    ORDER BY created_at 
+								    LIMIT $1
+								    FOR UPDATE SKIP LOCKED
+								)
 								RETURNING number;`
 
 	UpdateOrdersStatus = `UPDATE ORDERS 
@@ -184,11 +184,10 @@ func (s *Database) AddUser(ctx context.Context, login string, password string) e
 
 func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderData, error) {
 	var (
-		userUUID     string
-		status       string
-		uploadedAt   time.Time
-		accrual      float64
-		isProcessing bool
+		userUUID   string
+		status     string
+		uploadedAt time.Time
+		accrual    float64
 	)
 
 	err := s.Pool.QueryRow(ctx, GetOrder, number).Scan(
@@ -196,7 +195,6 @@ func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderDa
 		&status,
 		&uploadedAt,
 		&accrual,
-		&isProcessing,
 	)
 
 	if err != nil {
@@ -207,11 +205,10 @@ func (s *Database) GetOrder(ctx context.Context, number string) (*models.OrderDa
 	}
 
 	return &models.OrderData{
-		UserUUID:     userUUID,
-		Status:       status,
-		UploadedAt:   uploadedAt,
-		Accrual:      accrual,
-		IsProcessing: isProcessing,
+		UserUUID:   userUUID,
+		Status:     status,
+		UploadedAt: uploadedAt,
+		Accrual:    accrual,
 	}, nil
 }
 
@@ -223,28 +220,25 @@ func (s *Database) GetOrders(ctx context.Context, userUUID string) ([]models.Ord
 	}
 	for rows.Next() {
 		var (
-			userUUID     string
-			status       string
-			uploadedAt   time.Time
-			accrual      float64
-			isProcessing bool
+			userUUID   string
+			status     string
+			uploadedAt time.Time
+			accrual    float64
 		)
 		err := rows.Scan(
 			&userUUID,
 			&status,
 			&uploadedAt,
 			&accrual,
-			&isProcessing,
 		)
 		if err != nil {
 			return orders, fmt.Errorf("failed scan order data: %w", err)
 		}
 		orders = append(orders, models.OrderData{
-			UserUUID:     userUUID,
-			Status:       status,
-			UploadedAt:   uploadedAt,
-			Accrual:      accrual,
-			IsProcessing: isProcessing})
+			UserUUID:   userUUID,
+			Status:     status,
+			UploadedAt: uploadedAt,
+			Accrual:    accrual})
 	}
 	return orders, err
 }
@@ -268,9 +262,9 @@ func (s *Database) ClaimOrdersForProcessing(ctx context.Context, count int) ([]s
 	return numbers, err
 }
 
-func (s *Database) AddOrder(ctx context.Context, number string, userUUID string, uploadedAt time.Time) error {
+func (s *Database) AddOrder(ctx context.Context, number string, userUUID string, createdAt time.Time) error {
 	var prevNumber string
-	err := s.Pool.QueryRow(ctx, InsertOrder, number, userUUID, models.OrderStatusNew, uploadedAt, 0, false).Scan(&prevNumber)
+	err := s.Pool.QueryRow(ctx, InsertOrder, number, userUUID, models.OrderStatusNew, 0, 0, createdAt, createdAt).Scan(&prevNumber)
 
 	if err == nil {
 		return nil

@@ -15,7 +15,7 @@ type IStorage interface {
 	GetOrders(ctx context.Context, userUUID string) ([]models.OrderData, error)
 	ClaimOrdersForProcessing(ctx context.Context, count int) ([]string, error)
 	UpdateOrder(ctx context.Context, number string, status string, accrual float64) error
-	AddOrder(ctx context.Context, number string, userUUID string, uploadetAt time.Time) error
+	AddOrder(ctx context.Context, number string, userUUID string, createdAt time.Time) error
 	Ping(ctx context.Context) error
 	Close() error
 }
