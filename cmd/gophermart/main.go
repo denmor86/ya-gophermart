@@ -14,12 +14,12 @@ func main() {
 	// загрузка конфига
 	config := config.NewConfig()
 	// инициализация логгера
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		panic(fmt.Sprintf("can't initialize logger: %s ", err.Error()))
 	}
 	defer logger.Sync()
 
-	storage, err := storage.NewDatabaseStorage(config.DatabaseDSN)
+	storage, err := storage.NewDatabaseStorage(config.Server.DatabaseDSN)
 	if err != nil {
 		panic(fmt.Sprintf("can't create database storage: %s ", errors.Cause(err).Error()))
 	}

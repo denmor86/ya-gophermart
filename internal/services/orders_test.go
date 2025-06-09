@@ -22,11 +22,11 @@ func TestOrderService_AddOrder(t *testing.T) {
 	mockStorage := mocks.NewMockIStorage(ctrl)
 
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	orders := NewOrders(mockStorage)
+	orders := NewOrders(config.Accrual.AccrualAddr, mockStorage)
 
 	testCases := []struct {
 		TestName      string
@@ -124,11 +124,11 @@ func TestOrderService_GetOrders(t *testing.T) {
 	mockStorage := mocks.NewMockIStorage(ctrl)
 
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	orders := NewOrders(mockStorage)
+	orders := NewOrders(config.Accrual.AccrualAddr, mockStorage)
 
 	testCases := []struct {
 		Name           string
@@ -204,11 +204,11 @@ func TestOrderService_ClaimOrdersForProcessing(t *testing.T) {
 	mockStorage := mocks.NewMockIStorage(ctrl)
 
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	orders := NewOrders(mockStorage)
+	orders := NewOrders(config.Accrual.AccrualAddr, mockStorage)
 
 	testCases := []struct {
 		Name                 string

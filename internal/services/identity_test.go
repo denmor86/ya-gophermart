@@ -24,7 +24,7 @@ func TestNewIdentityService(t *testing.T) {
 		mockUserRepo := mocks.NewMockIStorage(ctrl)
 
 		config := config.DefaultConfig()
-		identity := NewIdentity(config, mockUserRepo)
+		identity := NewIdentity(config.Server.JWTSecret, mockUserRepo)
 		baseService, ok := identity.(*Identity)
 		if !ok {
 			t.Fatalf("Expected *Identity, got: '%T'", identity)
@@ -44,7 +44,7 @@ func TestRegisterUser(t *testing.T) {
 	mockStorage := mocks.NewMockIStorage(ctrl)
 
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
@@ -86,7 +86,7 @@ func TestRegisterUser(t *testing.T) {
 		t.Run(tc.TestName, func(t *testing.T) {
 			tc.SetupMocks()
 
-			identity := NewIdentity(config, mockStorage)
+			identity := NewIdentity(config.Server.JWTSecret, mockStorage)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
@@ -110,7 +110,7 @@ func TestAuthenticateUser(t *testing.T) {
 	mockStorage := mocks.NewMockIStorage(ctrl)
 
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 	passwordHash, _ := bcrypt.GenerateFromPassword([]byte("test_pass"), bcrypt.DefaultCost)
@@ -155,7 +155,7 @@ func TestAuthenticateUser(t *testing.T) {
 		t.Run(tc.TestName, func(t *testing.T) {
 			mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).DoAndReturn(tc.mockReturn)
 
-			identity := NewIdentity(config, mockStorage)
+			identity := NewIdentity(config.Server.JWTSecret, mockStorage)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()

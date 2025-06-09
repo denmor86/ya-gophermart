@@ -21,8 +21,8 @@ type Router struct {
 func NewRouter(config config.Config, storage storage.IStorage) *Router {
 	return &Router{
 		Config:    config,
-		Indentity: services.NewIdentity(config, storage),
-		Orders:    services.NewOrders(storage),
+		Indentity: services.NewIdentity(config.Server.JWTSecret, storage),
+		Orders:    services.NewOrders(config.Accrual.AccrualAddr, storage),
 	}
 }
 

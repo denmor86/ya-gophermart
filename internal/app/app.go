@@ -20,11 +20,11 @@ func Run(config config.Config, storage storage.IStorage) {
 	router := router.NewRouter(config, storage)
 
 	server := &http.Server{
-		Addr:    config.ListenAddr,
+		Addr:    config.Server.ListenAddr,
 		Handler: router.HandleRouter(),
 	}
 	// Создание и запуск воркера
-	worker := worker.NewOrderWorker(router.Orders)
+	worker := worker.NewOrderWorker(router.Orders, config.Accrual)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	worker.Start(ctx)

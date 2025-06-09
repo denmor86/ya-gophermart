@@ -157,3 +157,17 @@ func (mr *MockIStorageMockRecorder) Ping(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockIStorage)(nil).Ping), ctx)
 }
+
+// UpdateOrder mocks base method.
+func (m *MockIStorage) UpdateOrder(ctx context.Context, number, status string, accrual float64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOrder", ctx, number, status, accrual)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateOrder indicates an expected call of UpdateOrder.
+func (mr *MockIStorageMockRecorder) UpdateOrder(ctx, number, status, accrual any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOrder", reflect.TypeOf((*MockIStorage)(nil).UpdateOrder), ctx, number, status, accrual)
+}

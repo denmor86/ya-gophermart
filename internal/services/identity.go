@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/denmor86/ya-gophermart/internal/config"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
@@ -36,8 +35,8 @@ type Identity struct {
 }
 
 // Создание сервиса
-func NewIdentity(cfg config.Config, storage storage.IStorage) IdentityService {
-	tokenAuth := jwtauth.New(TokenSecterAlgo, []byte(cfg.JWTSecret), nil)
+func NewIdentity(JWTSecret string, storage storage.IStorage) IdentityService {
+	tokenAuth := jwtauth.New(TokenSecterAlgo, []byte(JWTSecret), nil)
 	return &Identity{JWTAuth: tokenAuth, Storage: storage}
 }
 

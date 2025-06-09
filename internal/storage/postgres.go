@@ -31,22 +31,31 @@ const (
 						ON CONFLICT (login) DO NOTHING
 						RETURNING login;`
 	GetUser     = `SELECT uuid, password, login FROM USERS WHERE login=$1;`
-	GetOrder    = `SELECT user_uuid, status, uploaded_at, accrual, is_processing FROM ORDERS WHERE number=$1;`
-	InsertOrder = `INSERT INTO ORDERS (number, user_uuid, status, uploaded_at, accrual, is_processing) 
+	GetOrder    = `SELECT user_uuid, status, created_at, accrual FROM ORDERS WHERE number=$1;`
+	InsertOrder = `INSERT INTO ORDERS (number, user_uuid, status, created_at, accrual, is_processing) 
 						VALUES ($1, $2, $3, $4, $5, $6) 
 						ON CONFLICT (number) DO NOTHING
 						RETURNING number;`
-	GetOrders                = `SELECT user_uuid, status, uploaded_at, accrual, is_processing FROM ORDERS WHERE user_uuid=$1;`
+	GetOrders                = `SELECT user_uuid, status, created_at, accrual FROM ORDERS WHERE user_uuid=$1;`
 	ClaimOrdersForProcessing = `UPDATE ORDERS 
-								SET status = 'PROCESSING'
-								WHERE number IN (
-									SELECT number FROM ORDERS 
-									WHERE status = 'NEW'
-									ORDER BY uploaded_at 
-									LIMIT $1
-									FOR UPDATE SKIP LOCKED
-								)
-								RETURNING number`
+									SET status = 'PROCESSING'
+									    retry_count = retry_count + 1,
+			                   	     updated_at = NOW()
+									WHERE number IN (
+										SELECT number FROM ORDERS 
+										WHERE status = 'NEW' OR status = 'REGISTERED' OR (status = 'PROCESSING' AND retry_count < 3)
+										ORDER BY created_at 
+										LIMIT $1
+										FOR UPDATE SKIP LOCKED
+									)
+								RETURNING number;`
+
+	UpdateOrdersStatus = `UPDATE ORDERS 
+							SET status = $1,
+								accrual =$2
+							    retry_count = retry_count + 1,
+			                    updated_at = NOW()
+							WHERE order_id = $3`
 )
 
 // Создание хранилища
@@ -275,6 +284,16 @@ func (s *Database) AddOrder(ctx context.Context, number string, userUUID string,
 
 	// Все остальные ошибки
 	return fmt.Errorf("failed to add order: %w", err)
+}
+
+func (s *Database) UpdateOrder(ctx context.Context, number string, status string, accrual float64) error {
+
+	_, err := s.Pool.Exec(ctx, UpdateOrdersStatus, status, accrual, number)
+	// Успешное добавление
+	if err != nil {
+		return fmt.Errorf("failed to update order status: %w", err)
+	}
+	return nil
 }
 
 func (s *Database) Ping(ctx context.Context) error {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
 )
@@ -28,11 +29,12 @@ type OrdersService interface {
 
 type Orders struct {
 	Storage storage.IStorage
+	Accrual AccrualService
 }
 
 // Создание сервиса
-func NewOrders(storage storage.IStorage) OrdersService {
-	return &Orders{Storage: storage}
+func NewOrders(accrualAddr string, storage storage.IStorage) OrdersService {
+	return &Orders{Storage: storage, Accrual: NewAccrual(accrualAddr)}
 }
 
 // AddOrder - добавляет новый заказ, проверяя, не был ли он уже добавлен другим пользователем.
@@ -89,8 +91,15 @@ func (s *Orders) ClaimOrdersForProcessing(ctx context.Context, count int) ([]str
 
 // ProcessOrder - обработка заказа, запрос начисления вознаграждений
 func (s *Orders) ProcessOrder(ctx context.Context, number string) error {
-
-	return nil
+	accrual, status, err := s.Accrual.GetOrderAccrual(ctx, number)
+	if err != nil {
+		logger.Warn("Failed to get order %s accrual. Error:", number, err)
+		// оставляем статус PROCESSING, изменяем количество попыток запросов
+		s.Storage.UpdateOrder(ctx, number, models.OrderStatusProcessing, 0)
+		return err
+	}
+	// устанавливаем полученный статус и количество награждений
+	return s.Storage.UpdateOrder(ctx, number, status, accrual)
 }
 
 // CheckNumber проверяет строку используя алгоритм Луна

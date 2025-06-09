@@ -28,20 +28,20 @@ type testCase struct {
 func TestNewAccrualService(t *testing.T) {
 
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 	defer logger.Sync()
 
-	service := NewAccrual(config)
+	service := NewAccrual(config.Accrual.AccrualAddr)
 
 	baseService, ok := service.(*Accrual)
 	if !ok {
 		t.Fatalf("Expected *Accrual, got '%T'", service)
 	}
 	// проверка адреса сервиса
-	if baseService.AccrualAddr != config.AccrualAddr {
-		t.Errorf("Expected accrual address: '%v', got: '%v'", baseService.AccrualAddr, config.AccrualAddr)
+	if baseService.AccrualAddr != config.Accrual.AccrualAddr {
+		t.Errorf("Expected accrual address: '%v', got: '%v'", baseService.AccrualAddr, config.Accrual.AccrualAddr)
 	}
 	// Проверка лимитера
 	if baseService.Limiter == nil {
@@ -124,7 +124,7 @@ func TestGetOrderAccrual(t *testing.T) {
 		},
 	}
 	config := config.DefaultConfig()
-	if err := logger.Initialize(config.LogLevel); err != nil {
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 	defer logger.Sync()

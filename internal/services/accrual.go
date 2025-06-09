@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/denmor86/ya-gophermart/internal/config"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"golang.org/x/time/rate"
@@ -32,9 +31,9 @@ type Accrual struct {
 }
 
 // Создание сервиса
-func NewAccrual(config config.Config) AccrualService {
+func NewAccrual(address string) AccrualService {
 	return &Accrual{
-		AccrualAddr: config.AccrualAddr,
+		AccrualAddr: address,
 		Limiter:     rate.NewLimiter(rate.Inf, 1),
 	}
 }

@@ -2,100 +2,119 @@ package worker
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/config"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/services"
 	"github.com/sony/gobreaker"
 )
 
-func InitCircuitBreaker() *gobreaker.CircuitBreaker {
-	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
-		Name:    "accrual-service",
-		Timeout: 30 * time.Second, // через 30 сек пробуем подключиться
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
-			// 5 попыток достучатся до сервиса
-			return counts.ConsecutiveFailures >= 5
-		},
-		OnStateChange: func(name string, from, to gobreaker.State) {
-			logger.Info("Circuit Breaker '%s': %s → %s", name, from, to)
-		},
-	})
-}
-
-// OrderWorker - основной воркер для обработки заказов
 type OrderWorker struct {
-	Orders       services.OrdersService
-	Breaker      *gobreaker.CircuitBreaker
-	WaitGroup    sync.WaitGroup
-	QuitChan     chan struct{}
-	BatchSize    int
-	PollInterval time.Duration
+	Orders    services.OrdersService
+	Breaker   *gobreaker.CircuitBreaker
+	WaitGroup sync.WaitGroup
+	QuitChan  chan struct{}
+	config    config.AccrualConfig
 }
 
-// NewOrderWorker - конструктор обработчика системы расчёта вознаграждений
-func NewOrderWorker(orders services.OrdersService) *OrderWorker {
+func NewOrderWorker(orders services.OrdersService, config config.AccrualConfig) *OrderWorker {
+	// Установка значений по умолчанию
+	if config.BatchSize <= 0 {
+		config.BatchSize = 10
+	}
+	if config.PollInterval <= 0 {
+		config.PollInterval = 5 * time.Second
+	}
+	if config.ProcessingTimeout <= 0 {
+		config.ProcessingTimeout = 10 * time.Second
+	}
+
 	return &OrderWorker{
-		Orders:       orders,
-		Breaker:      InitCircuitBreaker(),
-		QuitChan:     make(chan struct{}),
-		BatchSize:    10,
-		PollInterval: 5 * time.Second,
+		Orders: orders,
+		Breaker: gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:    "accrual-service",
+			Timeout: 30 * time.Second,
+			ReadyToTrip: func(counts gobreaker.Counts) bool {
+				return counts.ConsecutiveFailures >= 5
+			},
+			OnStateChange: func(name string, from, to gobreaker.State) {
+				logger.Info("Circuit Breaker '%s': %s → %s", name, from, to)
+			},
+		}),
+		QuitChan: make(chan struct{}),
+		config:   config,
 	}
 }
 
-// Start - запускает воркер в фоне
 func (w *OrderWorker) Start(ctx context.Context) {
 	w.WaitGroup.Add(1)
 	go w.Run(ctx)
 }
 
-// Stop - корректно останавливает воркер
 func (w *OrderWorker) Stop() {
 	close(w.QuitChan)
 	w.WaitGroup.Wait()
 }
 
-// run - основная рабочая логика
 func (w *OrderWorker) Run(ctx context.Context) {
 	defer w.WaitGroup.Done()
 
-	ticker := time.NewTicker(w.PollInterval)
+	ticker := time.NewTicker(w.config.PollInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-w.QuitChan:
-			logger.Info("OrderWorker signal stop")
+			logger.Info("OrderWorker stopped by quit signal")
+			return
+		case <-ctx.Done():
+			logger.Info("OrderWorker stopped by context cancellation")
 			return
 		case <-ticker.C:
-			w.ProcessOrder(ctx)
+			w.processBatch(ctx)
 		}
 	}
 }
-
-// ProcessOrder - обработка пачки заказов
-func (w *OrderWorker) ProcessOrder(ctx context.Context) {
-	if w.Breaker.State() == gobreaker.StateOpen {
-		logger.Warn("%s unavailable. Waiting...", w.Breaker.Name())
-		return
-	}
-
-	orderNumbers, err := w.Orders.ClaimOrdersForProcessing(ctx, w.BatchSize)
-
-	if err != nil {
-		logger.Error("error get orders for processing", err)
-		return
-	}
-
-	for _, orderNumber := range orderNumbers {
-		_, err := w.Breaker.Execute(func() (interface{}, error) {
-			return nil, w.Orders.ProcessOrder(ctx, orderNumber)
-		})
-
+func (w *OrderWorker) processBatch(ctx context.Context) {
+	// Используем Circuit Breaker для всей операции
+	_, err := w.Breaker.Execute(func() (interface{}, error) {
+		// Получаем заказы для обработки
+		orders, err := w.Orders.ClaimOrdersForProcessing(ctx, w.config.BatchSize)
 		if err != nil {
-			logger.Error("Error order processing", err)
+			if errors.Is(err, context.Canceled) {
+				return nil, err
+			}
+			return nil, fmt.Errorf("failed to claim orders: %w", err)
 		}
+
+		// Последовательная обработка заказов
+		var lastErr error
+		for _, orderNum := range orders {
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+				// Обрабатываем заказ с индивидуальным таймаутом
+				processCtx, cancel := context.WithTimeout(ctx, w.config.ProcessingTimeout)
+				defer cancel()
+
+				processErr := w.Orders.ProcessOrder(processCtx, orderNum)
+				if processErr != nil {
+					logger.Error("Failed to process order %s: %v", orderNum, processErr)
+					lastErr = processErr
+					// Продолжаем обработку следующих заказов
+				}
+			}
+		}
+
+		return nil, lastErr
+	})
+
+	if err != nil && !errors.Is(err, context.Canceled) {
+		logger.Error("Order batch processing failed: %v", err)
 	}
 }
