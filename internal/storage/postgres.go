@@ -36,7 +36,7 @@ const (
 						VALUES ($1, $2, $3, $4, $5, $6, $7) 
 						ON CONFLICT (number) DO NOTHING
 						RETURNING number;`
-	GetOrders                = `SELECT user_uuid, status, created_at, accrual FROM ORDERS WHERE user_uuid=$1;`
+	GetOrders                = `SELECT number, status, created_at, accrual FROM ORDERS WHERE user_uuid=$1;`
 	ClaimOrdersForProcessing = `UPDATE ORDERS 
 								SET status = 'PROCESSING',
 								    retry_count = retry_count + 1,
@@ -51,11 +51,12 @@ const (
 								RETURNING number;`
 
 	UpdateOrdersStatus = `UPDATE ORDERS 
-							SET status = $1,
-								accrual =$2
-							    retry_count = retry_count + 1,
-			                    updated_at = NOW()
-							WHERE order_id = $3`
+						  SET 
+						      status = $1,
+						      accrual = $2,
+						      retry_count = retry_count + 1,
+						      updated_at = NOW()
+						  WHERE number = $3;`
 )
 
 // Создание хранилища
@@ -220,13 +221,13 @@ func (s *Database) GetOrders(ctx context.Context, userUUID string) ([]models.Ord
 	}
 	for rows.Next() {
 		var (
-			userUUID   string
+			number     string
 			status     string
 			uploadedAt time.Time
 			accrual    float64
 		)
 		err := rows.Scan(
-			&userUUID,
+			&number,
 			&status,
 			&uploadedAt,
 			&accrual,
@@ -235,7 +236,7 @@ func (s *Database) GetOrders(ctx context.Context, userUUID string) ([]models.Ord
 			return orders, fmt.Errorf("failed scan order data: %w", err)
 		}
 		orders = append(orders, models.OrderData{
-			UserUUID:   userUUID,
+			Number:     number,
 			Status:     status,
 			UploadedAt: uploadedAt,
 			Accrual:    accrual})

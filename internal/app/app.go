@@ -13,6 +13,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/network/router"
 	"github.com/denmor86/ya-gophermart/internal/storage"
 	"github.com/denmor86/ya-gophermart/internal/worker"
+	"go.uber.org/zap"
 )
 
 func Run(config config.Config, storage storage.IStorage) {
@@ -37,7 +38,7 @@ func Run(config config.Config, storage storage.IStorage) {
 			"Starting server config:", config,
 		)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("error listen server", err.Error())
+			logger.Error("error listen server:", zap.Error(err))
 		}
 	}()
 
@@ -48,7 +49,7 @@ func Run(config config.Config, storage storage.IStorage) {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("error shutdown server", err.Error())
+		logger.Error("error shutdown server:", zap.Error(err))
 	}
 	logger.Info("Server stopped")
 }

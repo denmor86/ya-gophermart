@@ -10,6 +10,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
+	"go.uber.org/zap"
 )
 
 var (
@@ -93,7 +94,7 @@ func (s *Orders) ClaimOrdersForProcessing(ctx context.Context, count int) ([]str
 func (s *Orders) ProcessOrder(ctx context.Context, number string) error {
 	accrual, status, err := s.Accrual.GetOrderAccrual(ctx, number)
 	if err != nil {
-		logger.Warn("Failed to get order %s accrual. Error:", number, err)
+		logger.Warn("Failed to get order", number, "accrual. Error:", zap.Error(err))
 		// оставляем статус PROCESSING, изменяем количество попыток запросов
 		s.Storage.UpdateOrder(ctx, number, models.OrderStatusProcessing, 0)
 		return err

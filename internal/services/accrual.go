@@ -12,6 +12,7 @@ import (
 
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
+	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
 
@@ -42,7 +43,7 @@ func NewAccrual(address string) AccrualService {
 func (s *Accrual) GetOrderAccrual(ctx context.Context, orderNumber string) (float64, string, error) {
 	// Ожидаем разрешения от лимитера
 	if err := s.Limiter.Wait(ctx); err != nil {
-		logger.Error("Wait limiter error", err)
+		logger.Error("Wait limiter error:", zap.Error(err))
 		return 0, "", fmt.Errorf("limiter error: %w", err)
 	}
 
@@ -51,19 +52,19 @@ func (s *Accrual) GetOrderAccrual(ctx context.Context, orderNumber string) (floa
 	// Создаем запрос
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		logger.Error("Error create request to accurual", err)
+		logger.Error("Error create request to accurual:", zap.Error(err))
 		return 0, "", fmt.Errorf("failed to create new request")
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		logger.Error("Request to accrual service failed", err)
+		logger.Error("Request to accrual service failed:", zap.Error(err))
 		return 0, "", fmt.Errorf("request to accrual service failed: %w", err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			logger.Error("Failed to close response body", closeErr)
+			logger.Error("Failed to close response body:", zap.Error(closeErr))
 		}
 	}()
 
@@ -73,7 +74,7 @@ func (s *Accrual) GetOrderAccrual(ctx context.Context, orderNumber string) (floa
 	// Обработка кода ответа
 	switch resp.StatusCode {
 	case http.StatusTooManyRequests:
-		logger.Warn("Too many requests to accrual service", orderNumber)
+		logger.Warn("Too many requests to accrual service:", orderNumber)
 
 		// Получение заголовок Retry-After
 		retryAfter := resp.Header.Get("Retry-After")
@@ -111,7 +112,7 @@ func (s *Accrual) GetOrderAccrual(ctx context.Context, orderNumber string) (floa
 	case http.StatusOK:
 		// Продолжаем обработку
 	default:
-		logger.Error("Accrual service returned an error", resp.StatusCode)
+		logger.Error("Accrual service returned an error:", resp.StatusCode)
 		return 0, "", ErrAccrualServiceUnavailable
 	}
 
@@ -122,7 +123,7 @@ func (s *Accrual) GetOrderAccrual(ctx context.Context, orderNumber string) (floa
 		Accrual float64 `json:"accrual,omitempty"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		logger.Error("Error decode JSON response", err)
+		logger.Error("Error decode JSON response:", zap.Error(err))
 		return 0, "", fmt.Errorf("failed decode JSON response")
 	}
 
@@ -130,7 +131,7 @@ func (s *Accrual) GetOrderAccrual(ctx context.Context, orderNumber string) (floa
 		result.Status != models.OrderStatusProcessing &&
 		result.Status != models.OrderStatusInvalid &&
 		result.Status != models.OrderStatusProcessed {
-		logger.Error("Undefined status request", result.Status)
+		logger.Error("Undefined status request:", result.Status)
 		return 0, "", fmt.Errorf("undefined status request %s", result.Status)
 	}
 
@@ -165,7 +166,7 @@ func (s *Accrual) UpdateRateLimit(headers http.Header) {
 			s.Limiter.SetBurst(limit)
 			s.Mutex.Unlock()
 
-			fmt.Printf("Updated rate limit: %d requests per %v\n", limit, window)
+			logger.Info("Updated rate limit:", limit, "requests per:", window)
 		}
 	}
 }

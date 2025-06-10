@@ -10,6 +10,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
 	"github.com/go-chi/jwtauth/v5"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,13 +53,13 @@ func (i *Identity) RegisterUser(context context.Context, user models.UserRequest
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		logger.Error("Error generating password hash", err)
+		logger.Error("Error generating password hash:", zap.Error(err))
 		return err
 	}
 
 	err = i.Storage.AddUser(context, user.Login, string(hashedPassword))
 	if err != nil {
-		logger.Error("Error registering user", user.Login, err)
+		logger.Error("Error registering user", user.Login, zap.Error(err))
 		return err
 	}
 	return nil
@@ -70,7 +71,7 @@ func (s *Identity) AuthenticateUser(context context.Context, user models.UserReq
 
 	userData, err := s.Storage.GetUser(context, user.Login)
 	if err != nil {
-		logger.Error("Error getting user password", err)
+		logger.Error("Error getting user password:", zap.Error(err))
 		return false, err
 	}
 

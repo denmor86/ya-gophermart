@@ -11,6 +11,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/services"
+	"go.uber.org/zap"
 )
 
 // OrdersHandler — обработчик совершения покупки пользователем
@@ -19,19 +20,19 @@ func OrdersHandler(s services.OrdersService) http.HandlerFunc {
 		// получение данных о пользователе
 		username, err := services.GetUsername(r.Context())
 		if err != nil {
-			logger.Warn("Failed to get username", err)
+			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		body, err := io.ReadAll(r.Body)
 		if err != nil || len(body) == 0 {
-			logger.Warn("Invalid body", err)
+			logger.Warn("Invalid body:", zap.Error(err))
 			http.Error(w, "Invalid body format", http.StatusBadRequest)
 			return
 		}
 		defer func() {
 			if err := r.Body.Close(); err != nil {
-				logger.Error("Error to close body", err)
+				logger.Error("Error to close body:", zap.Error(err))
 			}
 		}()
 
@@ -53,7 +54,7 @@ func OrdersHandler(s services.OrdersService) http.HandlerFunc {
 				http.Error(w, "Order number already uploaded by another user", http.StatusConflict)
 				return
 			default:
-				logger.Error("Failed to add order", err)
+				logger.Error("Failed to add order:", zap.Error(err))
 				http.Error(w, "Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -68,7 +69,7 @@ func GetOrdersHandler(s services.OrdersService) http.HandlerFunc {
 		// получение данных о пользователе
 		username, err := services.GetUsername(r.Context())
 		if err != nil {
-			logger.Warn("Failed to get username", err)
+			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -82,7 +83,7 @@ func GetOrdersHandler(s services.OrdersService) http.HandlerFunc {
 				http.Error(w, "Order number already uploaded by another user", http.StatusConflict)
 				return
 			default:
-				logger.Error("Failed to add order", err)
+				logger.Error("Failed to add order:", zap.Error(err))
 				http.Error(w, "Server Error", http.StatusInternalServerError)
 				return
 			}
@@ -108,7 +109,7 @@ func GetOrdersHandler(s services.OrdersService) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		err = json.NewEncoder(w).Encode(response)
 		if err != nil {
-			logger.Error("Failed to encode JSON response", err)
+			logger.Error("Failed to encode JSON response:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}

@@ -11,6 +11,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/services"
 	"github.com/sony/gobreaker"
+	"go.uber.org/zap"
 )
 
 type OrderWorker struct {
@@ -85,6 +86,7 @@ func (w *OrderWorker) processBatch(ctx context.Context) {
 		// Получаем заказы для обработки
 		orders, err := w.Orders.ClaimOrdersForProcessing(ctx, w.config.BatchSize)
 		if err != nil {
+			logger.Error("Failed to claim orders:", zap.Error(err))
 			if errors.Is(err, context.Canceled) {
 				return nil, err
 			}
@@ -104,7 +106,7 @@ func (w *OrderWorker) processBatch(ctx context.Context) {
 
 				processErr := w.Orders.ProcessOrder(processCtx, orderNum)
 				if processErr != nil {
-					logger.Error("Failed to process order %s: %v", orderNum, processErr)
+					logger.Error("Failed to process order", orderNum, "Error:", zap.Error(processErr))
 					lastErr = processErr
 					// Продолжаем обработку следующих заказов
 				}
@@ -115,6 +117,6 @@ func (w *OrderWorker) processBatch(ctx context.Context) {
 	})
 
 	if err != nil && !errors.Is(err, context.Canceled) {
-		logger.Error("Order batch processing failed: %v", err)
+		logger.Error("Order batch processing failed:", zap.Error(err))
 	}
 }

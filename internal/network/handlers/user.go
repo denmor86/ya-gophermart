@@ -8,6 +8,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/services"
+	"go.uber.org/zap"
 )
 
 // RegisterUserHandler — регистрация нового пользователя
@@ -16,7 +17,7 @@ func RegisterUserHandler(i services.IdentityService) http.HandlerFunc {
 		// получение данных о пользователе
 		var user models.UserRequest
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-			logger.Error("Failed to decode request", err)
+			logger.Error("Failed to decode request:", zap.Error(err))
 			http.Error(w, "Invalid request format", http.StatusBadRequest)
 			return
 		}
@@ -25,11 +26,11 @@ func RegisterUserHandler(i services.IdentityService) http.HandlerFunc {
 		if err := i.RegisterUser(r.Context(), user); err != nil {
 			// пользователь уже существует
 			if errors.Is(err, services.ErrUserAlreadyExists) {
-				logger.Warn("Error register user", user.Login)
+				logger.Warn("Error register user:", user.Login)
 				http.Error(w, "login already exist", http.StatusConflict)
 			} else {
 				// ошибка регистрации
-				logger.Error("Error register user", err)
+				logger.Error("Error register user:", zap.Error(err))
 				http.Error(w, "Server error", http.StatusInternalServerError)
 			}
 			return
@@ -38,12 +39,12 @@ func RegisterUserHandler(i services.IdentityService) http.HandlerFunc {
 		// Генерация JWT токена для зарегистрированного пользователя
 		token, err := i.GenerateJWT(user.Login)
 		if err != nil {
-			logger.Error("Failed to generate token", err)
+			logger.Error("Failed to generate token:", zap.Error(err))
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
 		}
 		// Пользователь зарегистрирован и авторизован
-		logger.Info("User registered and authenticated", user.Login)
+		logger.Info("User registered and authenticated:", user.Login)
 		w.Header().Set("Authorization", "Bearer "+token)
 		w.WriteHeader(http.StatusOK)
 	})
@@ -55,14 +56,14 @@ func AuthenticateUserHandle(i services.IdentityService) http.HandlerFunc {
 		// получение данных о пользователе
 		var user models.UserRequest
 		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-			logger.Error("Failed to decode request", err)
+			logger.Error("Failed to decode request:", zap.Error(err))
 			http.Error(w, "Invalid request format", http.StatusBadRequest)
 			return
 		}
 		// аутентификация в Identity
 		authenticated, err := i.AuthenticateUser(r.Context(), user)
 		if err != nil {
-			logger.Error("Error authenticate user", err)
+			logger.Error("Error authenticate user:", zap.Error(err))
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
 		}
@@ -75,13 +76,13 @@ func AuthenticateUserHandle(i services.IdentityService) http.HandlerFunc {
 		// генерация токена
 		token, err := i.GenerateJWT(user.Login)
 		if err != nil {
-			logger.Error("Failed to generate token", err)
+			logger.Error("Failed to generate token:", zap.Error(err))
 			http.Error(w, "Server error", http.StatusInternalServerError)
 			return
 		}
 
 		// пользователь прошел авторизацию
-		logger.Info("User authenticated", user.Login)
+		logger.Info("User authenticated:", user.Login)
 		w.Header().Set("Authorization", "Bearer "+token)
 		w.WriteHeader(http.StatusOK)
 	})

@@ -13,7 +13,7 @@ type Arguments struct {
 	LogLevel    string `env:"LOG_LEVEL" envDefault:"info"`
 	DatabaseDSN string `env:"DATABASE_DSN" envDefault:""`
 	JWTSecret   string `env:"JWT_SECRET" envDefault:"secret"`
-	AccrualAddr string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"localhost:8081"`
+	AccrualAddr string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8081"`
 }
 
 // ServerConfig модель настроек сервера
@@ -76,7 +76,7 @@ func DefaultConfig() Config {
 			JWTSecret:   "secret",
 		},
 		Accrual: AccrualConfig{
-			AccrualAddr: "localhost:8081",
+			AccrualAddr: ":8081",
 		},
 	}
 }
