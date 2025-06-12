@@ -16,10 +16,10 @@ import (
 )
 
 // OrdersHandler — обработчик совершения покупки пользователем
-func OrdersHandler(s services.OrdersService) http.HandlerFunc {
+func OrdersHandler(o services.OrdersService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		username, err := services.GetUsername(r.Context())
+		username, err := helpers.GetUsername(r.Context())
 		if err != nil {
 			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -45,7 +45,7 @@ func OrdersHandler(s services.OrdersService) http.HandlerFunc {
 			return
 		}
 
-		err = s.AddOrder(r.Context(), username, orderNumber)
+		err = o.AddOrder(r.Context(), username, orderNumber)
 		if err != nil {
 			switch {
 			case errors.Is(err, services.ErrOrderAlreadyUploaded):
@@ -65,16 +65,16 @@ func OrdersHandler(s services.OrdersService) http.HandlerFunc {
 }
 
 // GetOrdersHandler — получение списка покупок пользователя
-func GetOrdersHandler(s services.OrdersService) http.HandlerFunc {
+func GetOrdersHandler(o services.OrdersService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		username, err := services.GetUsername(r.Context())
+		username, err := helpers.GetUsername(r.Context())
 		if err != nil {
 			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		orders, err := s.GetOrders(r.Context(), username)
+		orders, err := o.GetOrders(r.Context(), username)
 		if err != nil {
 			logger.Error("Failed to get order:", zap.Error(err))
 			http.Error(w, "Server Error", http.StatusInternalServerError)

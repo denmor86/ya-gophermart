@@ -47,10 +47,6 @@ func (s *Loyalty) GetBalance(ctx context.Context, login string) (*models.UserBal
 func (s *Loyalty) GetWithdrawals(ctx context.Context, login string) ([]models.WithdrawalData, error) {
 	user, err := s.Storage.GetUser(ctx, login)
 	if err != nil {
-		logger.Error("Failed to get user", zap.Error(err))
-		return nil, err
-	}
-	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			logger.Warn("User not found", login)
 			return nil, storage.ErrUserNotFound

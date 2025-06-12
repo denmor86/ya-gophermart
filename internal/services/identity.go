@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/denmor86/ya-gophermart/internal/logger"
@@ -66,10 +65,10 @@ func (i *Identity) RegisterUser(context context.Context, user models.UserRequest
 }
 
 // Аутентификация пользователя
-func (s *Identity) AuthenticateUser(context context.Context, user models.UserRequest) (bool, error) {
+func (i *Identity) AuthenticateUser(context context.Context, user models.UserRequest) (bool, error) {
 	logger.Info("Authenticate user", user.Login)
 
-	userData, err := s.Storage.GetUser(context, user.Login)
+	userData, err := i.Storage.GetUser(context, user.Login)
 	if err != nil {
 		logger.Error("Error getting user password:", zap.Error(err))
 		return false, err
@@ -99,15 +98,4 @@ func (i *Identity) GenerateJWT(username string) (string, error) {
 // Возвращаем указатель на JWTAuth (chi)
 func (i *Identity) GetTokenAuth() *jwtauth.JWTAuth {
 	return i.JWTAuth
-}
-
-// GetUsername - извлекает имя пользователя из контекста JWT токена
-func GetUsername(context context.Context) (string, error) {
-	_, claims, _ := jwtauth.FromContext(context)
-	login, ok := claims["username"].(string)
-	if !ok {
-		logger.Warn("undefined username from token")
-		return "", fmt.Errorf("undefined username")
-	}
-	return login, nil
 }

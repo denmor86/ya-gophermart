@@ -15,16 +15,16 @@ import (
 )
 
 // GetOrdersHandler — получение списка покупок пользователя
-func GetUserBalanceHandler(s services.LoyaltyService) http.HandlerFunc {
+func GetUserBalanceHandler(l services.LoyaltyService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		username, err := services.GetUsername(r.Context())
+		username, err := helpers.GetUsername(r.Context())
 		if err != nil {
 			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		balance, err := s.GetBalance(r.Context(), username)
+		balance, err := l.GetBalance(r.Context(), username)
 		if err != nil {
 			logger.Error("Failed to get user balance:", zap.Error(err))
 			http.Error(w, "Server Error", http.StatusInternalServerError)
@@ -42,10 +42,10 @@ func GetUserBalanceHandler(s services.LoyaltyService) http.HandlerFunc {
 }
 
 // WithdrawHandler — Запрос на списание средств
-func WithdrawHandler(s services.LoyaltyService) http.HandlerFunc {
+func WithdrawHandler(l services.LoyaltyService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		username, err := services.GetUsername(r.Context())
+		username, err := helpers.GetUsername(r.Context())
 		if err != nil {
 			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -62,7 +62,7 @@ func WithdrawHandler(s services.LoyaltyService) http.HandlerFunc {
 			http.Error(w, "Invalid order number format", http.StatusUnprocessableEntity)
 			return
 		}
-		err = s.ProcessWithdraw(r.Context(), username, req.OrderNumber, decimal.NewFromFloat(req.Withdrawn))
+		err = l.ProcessWithdraw(r.Context(), username, req.OrderNumber, decimal.NewFromFloat(req.Withdrawn))
 		if err != nil {
 			switch {
 			case errors.Is(err, services.ErrInsufficientFunds):
@@ -79,16 +79,16 @@ func WithdrawHandler(s services.LoyaltyService) http.HandlerFunc {
 }
 
 // GetWithdrawHandler — получение информации о выводе средств с накопительного счёта пользователем.
-func GetWithdrawHandler(s services.LoyaltyService) http.HandlerFunc {
+func GetWithdrawHandler(l services.LoyaltyService) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// получение данных о пользователе
-		username, err := services.GetUsername(r.Context())
+		username, err := helpers.GetUsername(r.Context())
 		if err != nil {
 			logger.Warn("Failed to get username:", zap.Error(err))
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		withdrawals, err := s.GetWithdrawals(r.Context(), username)
+		withdrawals, err := l.GetWithdrawals(r.Context(), username)
 		if err != nil {
 			logger.Error("Failed to get user withdrawals:", zap.Error(err))
 			http.Error(w, "Server Error", http.StatusInternalServerError)
