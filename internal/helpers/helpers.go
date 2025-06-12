@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/denmor86/ya-gophermart/internal/logger"
-	"github.com/go-chi/jwtauth"
+	"github.com/go-chi/jwtauth/v5"
 )
 
 // GetUsername - извлекает имя пользователя из контекста JWT токена
