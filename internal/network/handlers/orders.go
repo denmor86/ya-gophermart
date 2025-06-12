@@ -93,7 +93,8 @@ func GetOrdersHandler(o services.OrdersService) http.HandlerFunc {
 				UploadedAt: order.UploadedAt.Format(time.RFC3339),
 			}
 			if order.Status == models.OrderStatusProcessed {
-				item.Accrual = order.Accrual
+				value, _ := order.Accrual.Float64()
+				item.Accrual = value
 			}
 			response = append(response, item)
 		}

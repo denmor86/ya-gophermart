@@ -18,6 +18,6 @@ type UserData struct {
 
 // UserBalance - модель баланса пользователя
 type UserBalance struct {
-	Current   decimal.Decimal
-	Withdrawn decimal.Decimal
+	Current   float64 `json:"current"`   // Текущий баланс пользователя
+	Withdrawn float64 `json:"withdrawn"` // Общая сумма выведенных средств
 }

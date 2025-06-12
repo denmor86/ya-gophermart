@@ -74,7 +74,7 @@ func (s *Loyalty) ProcessWithdraw(ctx context.Context, login string, orderNumber
 	}
 
 	// Проверка на отрицательную сумму при выводе средств
-	if sum.LessThan(decimal.NewFromFloat(0)) {
+	if sum.LessThan(decimal.Zero) {
 		return ErrInvalidWithdrawalAmount
 	}
 

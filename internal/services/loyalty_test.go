@@ -57,10 +57,10 @@ func TestLoyaltyService_GetBalance(t *testing.T) {
 			Name:  "Success. #3",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(&models.UserBalance{Current: decimal.NewFromInt(10), Withdrawn: decimal.NewFromInt(5)}, nil)
+				mockStorage.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(&models.UserBalance{Current: 10, Withdrawn: 5}, nil)
 			},
 			ExpectedError:   nil,
-			ExpectedBalance: &models.UserBalance{Current: decimal.NewFromInt(10), Withdrawn: decimal.NewFromInt(5)},
+			ExpectedBalance: &models.UserBalance{Current: 10, Withdrawn: 5},
 		},
 	}
 

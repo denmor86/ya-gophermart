@@ -71,13 +71,13 @@ const (
 					  GROUP BY 
 					      USERS.balance;`
 	UpdateUserBalance = `UPDATE USERS 
-						  SET balance = $1,
+						  SET balance = balance + $1
 						  WHERE id = $2;`
 	InsertWithdrawal = `INSERT INTO LOYALTY (user_id, order_number, amount) 
 							VALUES ($1, $2, $3) 
 							ON CONFLICT (order_number) DO NOTHING
 							RETURNING order_number;`
-	GetWithdrawal = `SELECT order_number, user_id, amount, processed_at FROM ORDERS WHERE user_id=$1 ORDER BY created_at;`
+	GetWithdrawal = `SELECT order_number, user_id, amount, processed_at FROM LOYALTY WHERE user_id=$1 ORDER BY processed_at;`
 )
 
 // Создание хранилища
@@ -351,8 +351,8 @@ func (s *Database) UpdateOrderAndBalance(ctx context.Context, number string, sta
 // GetUserBalance - Получение баланса и потраченных баллов пользователя
 func (s *Database) GetUserBalance(ctx context.Context, login string) (*models.UserBalance, error) {
 	var (
-		current   decimal.Decimal
-		withdrawn decimal.Decimal
+		current   float64
+		withdrawn float64
 	)
 
 	err := s.Pool.QueryRow(ctx, GetUserBalance, login).Scan(
@@ -402,8 +402,8 @@ func (s *Database) AddWithdrawal(ctx context.Context, loyalty models.WithdrawalD
 	err = tx.QueryRow(
 		ctx,
 		InsertWithdrawal,
-		loyalty.OrderNumber,
 		loyalty.UserID,
+		loyalty.OrderNumber,
 		loyalty.Amount,
 	).Scan(&prevNumber)
 
@@ -443,6 +443,7 @@ func (s *Database) GetWithdrawals(ctx context.Context, userID string) ([]models.
 			&orderNumber,
 			&userID,
 			&amount,
+			&processedAt,
 		)
 		if err != nil {
 			return withdrawals, fmt.Errorf("failed scan loyaltys data: %w", err)
