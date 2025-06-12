@@ -17,7 +17,7 @@ var (
 )
 
 type LoyaltyService interface {
-	GetBalance(ctx context.Context, ogin string) (*models.UserBalance, error)
+	GetBalance(ctx context.Context, login string) (*models.UserBalance, error)
 	GetWithdrawals(ctx context.Context, login string) ([]models.WithdrawalData, error)
 	ProcessWithdraw(ctx context.Context, login string, order string, sum decimal.Decimal) error
 }
