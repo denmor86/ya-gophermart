@@ -35,7 +35,7 @@ const (
 						RETURNING login;`
 	GetUser          = `SELECT id, password, login, balance FROM USERS WHERE login=$1;`
 	GetOrder         = `SELECT user_id, status, created_at, accrual FROM ORDERS WHERE number=$1;`
-	GetUserIdByOrder = `SELECT user_id FROM ORDERS WHERE number=$1;`
+	GetUserIDByOrder = `SELECT user_id FROM ORDERS WHERE number=$1;`
 	InsertOrder      = `INSERT INTO ORDERS (number, user_id, status, accrual, retry_count, created_at, updated_at) 
 						VALUES ($1, $2, $3, $4, $5, $6, $7) 
 						ON CONFLICT (number) DO NOTHING
@@ -330,7 +330,7 @@ func (s *Database) UpdateOrderAndBalance(ctx context.Context, number string, sta
 	// Обновляем баланс пользователя (только если есть начисление)
 	if accrual.GreaterThan(decimal.Zero) {
 		var userID string
-		err = tx.QueryRow(ctx, GetUserIdByOrder, number).Scan(&userID)
+		err = tx.QueryRow(ctx, GetUserIDByOrder, number).Scan(&userID)
 		if err != nil {
 			return fmt.Errorf("failed to get user: %w", err)
 		}
