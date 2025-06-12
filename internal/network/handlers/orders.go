@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/helpers"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/services"
@@ -38,7 +39,7 @@ func OrdersHandler(s services.OrdersService) http.HandlerFunc {
 
 		orderNumber := strings.TrimSpace(string(body))
 
-		if !services.CheckNumber(orderNumber) {
+		if !helpers.CheckNumber(orderNumber) {
 			logger.Warn("Invalid order number format", orderNumber)
 			http.Error(w, "Invalid order number format", http.StatusUnprocessableEntity)
 			return
@@ -75,18 +76,9 @@ func GetOrdersHandler(s services.OrdersService) http.HandlerFunc {
 		}
 		orders, err := s.GetOrders(r.Context(), username)
 		if err != nil {
-			switch {
-			case errors.Is(err, services.ErrOrderAlreadyUploaded):
-				w.WriteHeader(http.StatusOK)
-				return
-			case errors.Is(err, services.ErrOrderUploadedByAnother):
-				http.Error(w, "Order number already uploaded by another user", http.StatusConflict)
-				return
-			default:
-				logger.Error("Failed to add order:", zap.Error(err))
-				http.Error(w, "Server Error", http.StatusInternalServerError)
-				return
-			}
+			logger.Error("Failed to get order:", zap.Error(err))
+			http.Error(w, "Server Error", http.StatusInternalServerError)
+			return
 		}
 		if len(orders) == 0 {
 			w.WriteHeader(http.StatusNoContent)

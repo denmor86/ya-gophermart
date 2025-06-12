@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -125,7 +124,7 @@ func TestAuthenticateUser(t *testing.T) {
 		{
 			TestName: "AuthenticateUser Success #1",
 			mockReturn: func(ctx context.Context, login string) (*models.UserData, error) {
-				return &models.UserData{UserUUID: "1", Login: "mda", PasswordHash: string(passwordHash)}, nil
+				return &models.UserData{UserID: "1", Login: "mda", PasswordHash: string(passwordHash)}, nil
 			},
 			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 			expectedAuth:  true,
@@ -134,16 +133,16 @@ func TestAuthenticateUser(t *testing.T) {
 		{
 			TestName: "AuthenticateUser UserNotFound #2",
 			mockReturn: func(ctx context.Context, login string) (*models.UserData, error) {
-				return nil, fmt.Errorf("User %w", storage.ErrNotFound)
+				return nil, storage.ErrUserNotFound
 			},
 			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 			expectedAuth:  false,
-			ExpectedError: errors.New("User not found"),
+			ExpectedError: storage.ErrUserNotFound,
 		},
 		{
 			TestName: "AuthenticateUser InvalidPassword #3",
 			mockReturn: func(ctx context.Context, login string) (*models.UserData, error) {
-				return &models.UserData{UserUUID: "1", Login: "mda", PasswordHash: string("test_pass")}, nil
+				return &models.UserData{UserID: "1", Login: "mda", PasswordHash: string("test_pass")}, nil
 			},
 			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
 			expectedAuth:  false,

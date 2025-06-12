@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS USERS (
-   uuid TEXT PRIMARY KEY NOT NUll,
+   id TEXT PRIMARY KEY NOT NUll,
    login TEXT UNIQUE  NOT NUll,
    password TEXT NOT NUll
 );

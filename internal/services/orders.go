@@ -3,13 +3,12 @@ package services
 import (
 	"context"
 	"errors"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -48,13 +47,14 @@ func (s *Orders) AddOrder(ctx context.Context, login string, number string) erro
 
 	// Проверяем, был ли уже добавлен заказ с таким номером
 	existingOrder, err := s.Storage.GetOrder(ctx, number)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+	if err != nil && !errors.Is(err, storage.ErrOrderNotFound) {
+		logger.Warn("failed to add order:", zap.Error(err))
 		return err
 	}
 
 	if existingOrder != nil {
 		// Если заказ добавлен текущим пользователем
-		if existingOrder.UserUUID == user.UserUUID {
+		if existingOrder.UserID == user.UserID {
 			return ErrOrderAlreadyUploaded
 		}
 		// Если заказ добавлен другим пользователем
@@ -62,7 +62,7 @@ func (s *Orders) AddOrder(ctx context.Context, login string, number string) erro
 	}
 
 	// Добавление заказа
-	err = s.Storage.AddOrder(ctx, number, user.UserUUID, time.Now())
+	err = s.Storage.AddOrder(ctx, number, user.UserID, time.Now())
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (s *Orders) GetOrders(ctx context.Context, login string) ([]models.OrderDat
 		return nil, err
 	}
 
-	orders, err := s.Storage.GetOrders(ctx, user.UserUUID)
+	orders, err := s.Storage.GetOrders(ctx, user.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,41 +96,8 @@ func (s *Orders) ProcessOrder(ctx context.Context, number string) error {
 	if err != nil {
 		logger.Warn("Failed to get order", number, "accrual. Error:", zap.Error(err))
 		// оставляем статус PROCESSING, изменяем количество попыток запросов
-		s.Storage.UpdateOrder(ctx, number, models.OrderStatusProcessing, 0)
-		return err
+		status = models.OrderStatusProcessing
 	}
-	// устанавливаем полученный статус и количество награждений
-	return s.Storage.UpdateOrder(ctx, number, status, accrual)
-}
-
-// CheckNumber проверяет строку используя алгоритм Луна
-func CheckNumber(number string) bool {
-	// Удаляем все пробелы
-	number = strings.ReplaceAll(number, " ", "")
-
-	// Проверяем, что строка состоит только из цифр
-	if _, err := strconv.Atoi(number); err != nil {
-		return false
-	}
-
-	sum := 0
-	alternate := false
-
-	// Идем по цифрам справа налево
-	for i := len(number) - 1; i >= 0; i-- {
-		digit, _ := strconv.Atoi(string(number[i]))
-
-		if alternate {
-			digit *= 2
-			if digit > 9 {
-				digit = (digit % 10) + 1
-			}
-		}
-
-		sum += digit
-		alternate = !alternate
-	}
-
-	// Число валидно, если сумма кратна 10
-	return sum%10 == 0
+	// устанавливаем статус, количество баллов и обновляем баланс баллов пользователя
+	return s.Storage.UpdateOrderAndBalance(ctx, number, status, decimal.NewFromFloat(accrual))
 }

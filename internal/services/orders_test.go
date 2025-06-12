@@ -40,16 +40,16 @@ func TestOrderService_AddOrder(t *testing.T) {
 			Login:       "mda",
 			OrderNumber: "123456789",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, fmt.Errorf("user %w", storage.ErrNotFound))
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
 			},
-			ExpectedError: fmt.Errorf("user %w", storage.ErrNotFound),
+			ExpectedError: storage.ErrUserNotFound,
 		},
 		{
 			TestName:    "Error. Failed get order #2",
 			Login:       "mda",
 			OrderNumber: "123456789",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
 				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(nil, errors.New("failed to get order"))
 			},
 			ExpectedError: errors.New("failed to get order"),
@@ -59,8 +59,8 @@ func TestOrderService_AddOrder(t *testing.T) {
 			Login:       "mda",
 			OrderNumber: "123456789",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
-				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(&models.OrderData{UserUUID: "1"}, nil)
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
+				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(&models.OrderData{UserID: "1"}, nil)
 			},
 			ExpectedError: ErrOrderAlreadyUploaded,
 		},
@@ -69,8 +69,8 @@ func TestOrderService_AddOrder(t *testing.T) {
 			Login:       "mda",
 			OrderNumber: "123456789",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
-				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(&models.OrderData{UserUUID: "2"}, nil)
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
+				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(&models.OrderData{UserID: "2"}, nil)
 			},
 			ExpectedError: ErrOrderUploadedByAnother,
 		},
@@ -79,8 +79,8 @@ func TestOrderService_AddOrder(t *testing.T) {
 			Login:       "mda",
 			OrderNumber: "123456789",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
-				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(nil, fmt.Errorf("order %w", storage.ErrNotFound))
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
+				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(nil, storage.ErrOrderNotFound)
 				mockStorage.EXPECT().AddOrder(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			ExpectedError: nil,
@@ -90,8 +90,8 @@ func TestOrderService_AddOrder(t *testing.T) {
 			Login:       "mda",
 			OrderNumber: "123456789",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
-				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(nil, fmt.Errorf("order %w", storage.ErrNotFound))
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
+				mockStorage.EXPECT().GetOrder(gomock.Any(), "123456789").Return(nil, storage.ErrOrderNotFound)
 				mockStorage.EXPECT().AddOrder(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("failed to add order"))
 			},
 			ExpectedError: errors.New("failed to add order"),
@@ -141,16 +141,16 @@ func TestOrderService_GetOrders(t *testing.T) {
 			Name:  "Error. User not found #1",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, fmt.Errorf("user %w", storage.ErrNotFound))
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
 			},
-			ExpectedError:  fmt.Errorf("user %w", storage.ErrNotFound),
+			ExpectedError:  storage.ErrUserNotFound,
 			ExpectedOrders: nil,
 		},
 		{
 			Name:  "Error. Failed get orders #2",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
 				mockStorage.EXPECT().GetOrders(gomock.Any(), "1").Return(nil, errors.New("failed to get orders"))
 			},
 			ExpectedError:  errors.New("failed to get orders"),
@@ -160,16 +160,16 @@ func TestOrderService_GetOrders(t *testing.T) {
 			Name:  "Success. #3",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserUUID: "1"}, nil)
+				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
 				mockStorage.EXPECT().GetOrders(gomock.Any(), "1").Return([]models.OrderData{
-					{Number: "123456789", UserUUID: "1", Status: models.OrderStatusNew},
-					{Number: "987654321", UserUUID: "1", Status: models.OrderStatusProcessed},
+					{Number: "123456789", UserID: "1", Status: models.OrderStatusNew},
+					{Number: "987654321", UserID: "1", Status: models.OrderStatusProcessed},
 				}, nil)
 			},
 			ExpectedError: nil,
 			ExpectedOrders: []models.OrderData{
-				{Number: "123456789", UserUUID: "1", Status: models.OrderStatusNew},
-				{Number: "987654321", UserUUID: "1", Status: models.OrderStatusProcessed},
+				{Number: "123456789", UserID: "1", Status: models.OrderStatusNew},
+				{Number: "987654321", UserID: "1", Status: models.OrderStatusProcessed},
 			},
 		},
 	}

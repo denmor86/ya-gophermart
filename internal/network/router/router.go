@@ -16,6 +16,7 @@ type Router struct {
 	Config    config.Config
 	Indentity services.IdentityService
 	Orders    services.OrdersService
+	Loyalty   services.LoyaltyService
 }
 
 func NewRouter(config config.Config, storage storage.IStorage) *Router {
@@ -23,6 +24,7 @@ func NewRouter(config config.Config, storage storage.IStorage) *Router {
 		Config:    config,
 		Indentity: services.NewIdentity(config.Server.JWTSecret, storage),
 		Orders:    services.NewOrders(config.Accrual.AccrualAddr, storage),
+		Loyalty:   services.NewLoyalty(storage),
 	}
 }
 
@@ -40,6 +42,11 @@ func (router *Router) HandleRouter() chi.Router {
 				r.Use(jwtauth.Authenticator(ja))
 				r.Post("/orders", handlers.OrdersHandler(router.Orders))
 				r.With(compressMiddleware).Get("/orders", handlers.GetOrdersHandler(router.Orders))
+				r.Route("/balance", func(r chi.Router) {
+					r.With(compressMiddleware).Get("/", handlers.GetUserBalanceHandler(router.Loyalty))
+					r.Post("/withdraw", handlers.WithdrawHandler(router.Loyalty))
+				})
+				r.With(compressMiddleware).Get("/withdrawals", handlers.GetWithdrawHandler(router.Loyalty))
 			})
 		})
 	})
