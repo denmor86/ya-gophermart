@@ -9,9 +9,9 @@ import (
 )
 
 type Arguments struct {
-	ListenAddr        string        `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
+	ListenAddr        string        `env:"RUN_ADDRESS" envDefault:"localhost:8080"`
 	LogLevel          string        `env:"LOG_LEVEL" envDefault:"info"`
-	DatabaseDSN       string        `env:"DATABASE_DSN" envDefault:""`
+	DatabaseDSN       string        `env:"DATABASE_URI" envDefault:""`
 	JWTSecret         string        `env:"JWT_SECRET" envDefault:"secret"`
 	AccrualAddr       string        `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8081"`
 	BatchSize         int           `env:"WORKER_BATCH_SIZE" envDefault:"10"`
