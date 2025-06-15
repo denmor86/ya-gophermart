@@ -9,11 +9,14 @@ import (
 )
 
 type Arguments struct {
-	ListenAddr  string `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
-	LogLevel    string `env:"LOG_LEVEL" envDefault:"info"`
-	DatabaseDSN string `env:"DATABASE_DSN" envDefault:""`
-	JWTSecret   string `env:"JWT_SECRET" envDefault:"secret"`
-	AccrualAddr string `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8081"`
+	ListenAddr        string        `env:"SERVER_ADDRESS" envDefault:"localhost:8080"`
+	LogLevel          string        `env:"LOG_LEVEL" envDefault:"info"`
+	DatabaseDSN       string        `env:"DATABASE_DSN" envDefault:""`
+	JWTSecret         string        `env:"JWT_SECRET" envDefault:"secret"`
+	AccrualAddr       string        `env:"ACCRUAL_SYSTEM_ADDRESS" envDefault:"http://localhost:8081"`
+	BatchSize         int           `env:"WORKER_BATCH_SIZE" envDefault:"10"`
+	PollInterval      time.Duration `env:"WORKER_POLL_INTERVAL" envDefault:"5s"`
+	ProcessingTimeout time.Duration `env:"WORKER_PROCESSING_TIMEOUT" envDefault:"10s"`
 }
 
 // ServerConfig модель настроек сервера
@@ -62,7 +65,10 @@ func NewConfig() Config {
 			JWTSecret:   *secret,
 		},
 		Accrual: AccrualConfig{
-			AccrualAddr: *accrual,
+			AccrualAddr:       *accrual,
+			BatchSize:         args.BatchSize,
+			PollInterval:      args.PollInterval,
+			ProcessingTimeout: args.ProcessingTimeout,
 		},
 	}
 }
@@ -76,7 +82,10 @@ func DefaultConfig() Config {
 			JWTSecret:   "secret",
 		},
 		Accrual: AccrualConfig{
-			AccrualAddr: ":8081",
+			AccrualAddr:       ":8081",
+			BatchSize:         10,
+			PollInterval:      5 * time.Second,
+			ProcessingTimeout: 10 * time.Second,
 		},
 	}
 }

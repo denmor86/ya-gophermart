@@ -23,17 +23,6 @@ type OrderWorker struct {
 }
 
 func NewOrderWorker(orders services.OrdersService, config config.AccrualConfig) *OrderWorker {
-	// Установка значений по умолчанию
-	if config.BatchSize <= 0 {
-		config.BatchSize = 10
-	}
-	if config.PollInterval <= 0 {
-		config.PollInterval = 5 * time.Second
-	}
-	if config.ProcessingTimeout <= 0 {
-		config.ProcessingTimeout = 10 * time.Second
-	}
-
 	return &OrderWorker{
 		Orders: orders,
 		Breaker: gobreaker.NewCircuitBreaker(gobreaker.Settings{
