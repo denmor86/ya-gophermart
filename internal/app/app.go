@@ -26,8 +26,8 @@ func Run(config config.Config, storage storage.Storage) {
 	}
 	// Создание и запуск воркера
 	worker := worker.NewOrderWorker(router.Orders, config.Accrual)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, cancelWorker := context.WithCancel(context.Background())
+	defer cancelWorker()
 	worker.Start(ctx)
 
 	stop := make(chan os.Signal, 1)
