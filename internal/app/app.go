@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(config config.Config, storage storage.IStorage) {
+func Run(config config.Config, storage storage.Storage) {
 
 	router := router.NewRouter(config, storage)
 

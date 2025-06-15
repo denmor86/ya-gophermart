@@ -28,25 +28,26 @@ type OrdersService interface {
 }
 
 type Orders struct {
-	Storage storage.IStorage
-	Accrual AccrualService
+	OrdersStorage storage.OrdersStorage
+	UsersStorage  storage.UsersStorage
+	Accrual       AccrualService
 }
 
 // Создание сервиса
-func NewOrders(accrualAddr string, storage storage.IStorage) OrdersService {
-	return &Orders{Storage: storage, Accrual: NewAccrual(accrualAddr)}
+func NewOrders(accrualAddr string, orders storage.OrdersStorage, users storage.UsersStorage) OrdersService {
+	return &Orders{OrdersStorage: orders, UsersStorage: users, Accrual: NewAccrual(accrualAddr)}
 }
 
 // AddOrder - добавляет новый заказ, проверяя, не был ли он уже добавлен другим пользователем.
 func (s *Orders) AddOrder(ctx context.Context, login string, number string) error {
 	// Получаем пользователя по логину
-	user, err := s.Storage.GetUser(ctx, login)
+	user, err := s.UsersStorage.GetUser(ctx, login)
 	if err != nil {
 		return err
 	}
 
 	// Проверяем, был ли уже добавлен заказ с таким номером
-	existingOrder, err := s.Storage.GetOrder(ctx, number)
+	existingOrder, err := s.OrdersStorage.GetOrder(ctx, number)
 	if err != nil && !errors.Is(err, storage.ErrOrderNotFound) {
 		logger.Warn("failed to add order:", zap.Error(err))
 		return err
@@ -62,7 +63,7 @@ func (s *Orders) AddOrder(ctx context.Context, login string, number string) erro
 	}
 
 	// Добавление заказа
-	err = s.Storage.AddOrder(ctx, number, user.UserID, time.Now())
+	err = s.OrdersStorage.AddOrder(ctx, number, user.UserID, time.Now())
 	if err != nil {
 		return err
 	}
@@ -72,12 +73,12 @@ func (s *Orders) AddOrder(ctx context.Context, login string, number string) erro
 
 // GetOrders - возвращает список заказов пользователя.
 func (s *Orders) GetOrders(ctx context.Context, login string) ([]models.OrderData, error) {
-	user, err := s.Storage.GetUser(ctx, login)
+	user, err := s.UsersStorage.GetUser(ctx, login)
 	if err != nil {
 		return nil, err
 	}
 
-	orders, err := s.Storage.GetOrders(ctx, user.UserID)
+	orders, err := s.OrdersStorage.GetOrders(ctx, user.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (s *Orders) GetOrders(ctx context.Context, login string) ([]models.OrderDat
 
 // ClaimOrdersForProcessing - сформировать список номеров заказов из находящихся в статусе 'NEW' и установить им статус 'PROCESSING'
 func (s *Orders) ClaimOrdersForProcessing(ctx context.Context, count int) ([]string, error) {
-	return s.Storage.ClaimOrdersForProcessing(ctx, count)
+	return s.OrdersStorage.ClaimOrdersForProcessing(ctx, count)
 }
 
 // ProcessOrder - обработка заказа, запрос начисления вознаграждений
@@ -99,5 +100,5 @@ func (s *Orders) ProcessOrder(ctx context.Context, number string) error {
 		status = models.OrderStatusProcessing
 	}
 	// устанавливаем статус, количество баллов и обновляем баланс баллов пользователя
-	return s.Storage.UpdateOrderAndBalance(ctx, number, status, decimal.NewFromFloat(accrual))
+	return s.OrdersStorage.UpdateOrderAndBalance(ctx, number, status, decimal.NewFromFloat(accrual))
 }

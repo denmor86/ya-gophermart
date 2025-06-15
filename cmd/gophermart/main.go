@@ -19,15 +19,15 @@ func main() {
 	}
 	defer logger.Sync()
 
-	storage, err := storage.NewDatabaseStorage(config.Server.DatabaseDSN)
+	database, err := storage.NewDatabase(config.Server.DatabaseDSN)
 	if err != nil {
 		panic(fmt.Sprintf("can't create database storage: %s ", errors.Cause(err).Error()))
 	}
-	if err = storage.Initialize(); err != nil {
+	if err = database.Initialize(); err != nil {
 		panic(fmt.Sprintf("can't initialize database storage: %s ", errors.Cause(err).Error()))
 	}
-	defer storage.Close()
+	defer database.Close()
 
 	// создание маршутизатора
-	app.Run(config, storage)
+	app.Run(config, storage.NewStorage(database))
 }

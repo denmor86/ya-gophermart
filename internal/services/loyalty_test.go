@@ -19,14 +19,15 @@ import (
 func TestLoyaltyService_GetBalance(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStorage := mocks.NewMockIStorage(ctrl)
+	mockLoyaltys := mocks.NewMockLoyaltysStorage(ctrl)
+	mockUsers := mocks.NewMockUsersStorage(ctrl)
 
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	loyalty := NewLoyalty(mockStorage)
+	loyalty := NewLoyalty(mockLoyaltys, mockUsers)
 
 	testCases := []struct {
 		Name            string
@@ -39,7 +40,7 @@ func TestLoyaltyService_GetBalance(t *testing.T) {
 			Name:  "Error. User not found #1",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
+				mockUsers.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
 			},
 			ExpectedError:   storage.ErrUserNotFound,
 			ExpectedBalance: nil,
@@ -48,7 +49,7 @@ func TestLoyaltyService_GetBalance(t *testing.T) {
 			Name:  "Error. Failed get balance #2",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(nil, errors.New("failed to get orders"))
+				mockUsers.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(nil, errors.New("failed to get orders"))
 			},
 			ExpectedError:   errors.New("failed to get orders"),
 			ExpectedBalance: nil,
@@ -57,7 +58,7 @@ func TestLoyaltyService_GetBalance(t *testing.T) {
 			Name:  "Success. #3",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(&models.UserBalance{Current: 10, Withdrawn: 5}, nil)
+				mockUsers.EXPECT().GetUserBalance(gomock.Any(), "mda").Return(&models.UserBalance{Current: 10, Withdrawn: 5}, nil)
 			},
 			ExpectedError:   nil,
 			ExpectedBalance: &models.UserBalance{Current: 10, Withdrawn: 5},
@@ -91,14 +92,15 @@ func TestLoyaltyService_GetBalance(t *testing.T) {
 func TestLoyaltyService_GetWithdrawals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStorage := mocks.NewMockIStorage(ctrl)
+	mockLoyaltys := mocks.NewMockLoyaltysStorage(ctrl)
+	mockUsers := mocks.NewMockUsersStorage(ctrl)
 
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	loyalty := NewLoyalty(mockStorage)
+	loyalty := NewLoyalty(mockLoyaltys, mockUsers)
 
 	testCases := []struct {
 		Name                string
@@ -111,7 +113,7 @@ func TestLoyaltyService_GetWithdrawals(t *testing.T) {
 			Name:  "Error. User not found #1",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
 			},
 			ExpectedError:       storage.ErrUserNotFound,
 			ExpectedWithdrawals: nil,
@@ -120,8 +122,8 @@ func TestLoyaltyService_GetWithdrawals(t *testing.T) {
 			Name:  "Error. Failed get withdrawals #2",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
-				mockStorage.EXPECT().GetWithdrawals(gomock.Any(), "1").Return(nil, errors.New("failed to get orders"))
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
+				mockLoyaltys.EXPECT().GetWithdrawals(gomock.Any(), "1").Return(nil, errors.New("failed to get orders"))
 			},
 			ExpectedError:       errors.New("failed to get orders"),
 			ExpectedWithdrawals: nil,
@@ -130,8 +132,8 @@ func TestLoyaltyService_GetWithdrawals(t *testing.T) {
 			Name:  "Success. #3",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
-				mockStorage.EXPECT().GetWithdrawals(gomock.Any(), "1").Return([]models.WithdrawalData{
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1"}, nil)
+				mockLoyaltys.EXPECT().GetWithdrawals(gomock.Any(), "1").Return([]models.WithdrawalData{
 					{OrderNumber: "1", UserID: "1", Amount: decimal.NewFromInt(5)},
 					{OrderNumber: "2", UserID: "1", Amount: decimal.NewFromInt(10)},
 				}, nil)
@@ -171,14 +173,15 @@ func TestLoyaltyService_GetWithdrawals(t *testing.T) {
 func TestLoyaltyService_ProcessWithdraw(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStorage := mocks.NewMockIStorage(ctrl)
+	mockLoyaltys := mocks.NewMockLoyaltysStorage(ctrl)
+	mockUsers := mocks.NewMockUsersStorage(ctrl)
 
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	loyalty := NewLoyalty(mockStorage)
+	loyalty := NewLoyalty(mockLoyaltys, mockUsers)
 
 	testCases := []struct {
 		Name          string
@@ -192,7 +195,7 @@ func TestLoyaltyService_ProcessWithdraw(t *testing.T) {
 			Name:  "Error. User not found #1",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(nil, storage.ErrUserNotFound)
 			},
 			ExpectedError: storage.ErrUserNotFound,
 		},
@@ -202,7 +205,7 @@ func TestLoyaltyService_ProcessWithdraw(t *testing.T) {
 			Number: "1",
 			Sum:    decimal.NewFromInt(-1),
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
 			},
 			ExpectedError: ErrInvalidWithdrawalAmount,
 		},
@@ -212,7 +215,7 @@ func TestLoyaltyService_ProcessWithdraw(t *testing.T) {
 			Number: "1",
 			Sum:    decimal.NewFromInt(11),
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
 			},
 			ExpectedError: ErrInsufficientFunds,
 		},
@@ -220,8 +223,8 @@ func TestLoyaltyService_ProcessWithdraw(t *testing.T) {
 			Name:  "Error. Failed add withdrawals #4",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
-				mockStorage.EXPECT().AddWithdrawal(gomock.Any(), gomock.Any()).Return(errors.New("failed to get orders"))
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
+				mockLoyaltys.EXPECT().AddWithdrawal(gomock.Any(), gomock.Any()).Return(errors.New("failed to get orders"))
 			},
 			ExpectedError: errors.New("failed to get orders"),
 		},
@@ -229,8 +232,8 @@ func TestLoyaltyService_ProcessWithdraw(t *testing.T) {
 			Name:  "Success. #5",
 			Login: "mda",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
-				mockStorage.EXPECT().AddWithdrawal(gomock.Any(), gomock.Any()).Return(nil)
+				mockUsers.EXPECT().GetUser(gomock.Any(), "mda").Return(&models.UserData{UserID: "1", Balance: decimal.NewFromInt(10)}, nil)
+				mockLoyaltys.EXPECT().AddWithdrawal(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			ExpectedError: nil,
 		},

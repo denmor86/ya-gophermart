@@ -23,18 +23,19 @@ type LoyaltyService interface {
 }
 
 type Loyalty struct {
-	Storage storage.IStorage
+	LoyaltysStorage storage.LoyaltysStorage
+	UsersStorage    storage.UsersStorage
 }
 
 // Создание сервиса
-func NewLoyalty(storage storage.IStorage) LoyaltyService {
-	return &Loyalty{Storage: storage}
+func NewLoyalty(loyaltys storage.LoyaltysStorage, users storage.UsersStorage) LoyaltyService {
+	return &Loyalty{LoyaltysStorage: loyaltys, UsersStorage: users}
 }
 
 // GetBalance возващает баланс баллов пользователя
 func (s *Loyalty) GetBalance(ctx context.Context, login string) (*models.UserBalance, error) {
 	// Получаем баланс пользователя и сумму снятых средств из хранилища
-	userBalance, err := s.Storage.GetUserBalance(ctx, login)
+	userBalance, err := s.UsersStorage.GetUserBalance(ctx, login)
 	if err != nil {
 		logger.Error("Failed to get user balance", zap.Error(err))
 		return nil, err
@@ -45,7 +46,7 @@ func (s *Loyalty) GetBalance(ctx context.Context, login string) (*models.UserBal
 
 // GetLoyalty возвращает список всех выводов средств пользователя по его логину
 func (s *Loyalty) GetWithdrawals(ctx context.Context, login string) ([]models.WithdrawalData, error) {
-	user, err := s.Storage.GetUser(ctx, login)
+	user, err := s.UsersStorage.GetUser(ctx, login)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			logger.Warn("User not found", login)
@@ -56,7 +57,7 @@ func (s *Loyalty) GetWithdrawals(ctx context.Context, login string) ([]models.Wi
 	}
 
 	// Получаем список всех выводов средств пользователя
-	withdrawals, err := s.Storage.GetWithdrawals(ctx, user.UserID)
+	withdrawals, err := s.LoyaltysStorage.GetWithdrawals(ctx, user.UserID)
 	if err != nil {
 		logger.Error("Failed to get withdrawals:", zap.Error(err))
 		return nil, err
@@ -67,7 +68,7 @@ func (s *Loyalty) GetWithdrawals(ctx context.Context, login string) ([]models.Wi
 
 // ProcessWithdraw обработка запроса вывода средств для пользователя и заказа
 func (s *Loyalty) ProcessWithdraw(ctx context.Context, login string, orderNumber string, sum decimal.Decimal) error {
-	user, err := s.Storage.GetUser(ctx, login)
+	user, err := s.UsersStorage.GetUser(ctx, login)
 	if err != nil {
 		logger.Error("Failed to get user", zap.Error(err))
 		return err
@@ -90,5 +91,5 @@ func (s *Loyalty) ProcessWithdraw(ctx context.Context, login string, orderNumber
 	}
 
 	// Добавляем информацию о выводе и обновляем баланс пользователя
-	return s.Storage.AddWithdrawal(ctx, withdrawal)
+	return s.LoyaltysStorage.AddWithdrawal(ctx, withdrawal)
 }

@@ -31,11 +31,11 @@ type IdentityService interface {
 
 type Identity struct {
 	JWTAuth *jwtauth.JWTAuth
-	Storage storage.IStorage
+	Storage storage.UsersStorage
 }
 
 // Создание сервиса
-func NewIdentity(JWTSecret string, storage storage.IStorage) IdentityService {
+func NewIdentity(JWTSecret string, storage storage.UsersStorage) IdentityService {
 	tokenAuth := jwtauth.New(TokenSecterAlgo, []byte(JWTSecret), nil)
 	return &Identity{JWTAuth: tokenAuth, Storage: storage}
 }

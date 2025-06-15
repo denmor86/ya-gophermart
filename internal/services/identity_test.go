@@ -20,10 +20,10 @@ func TestNewIdentityService(t *testing.T) {
 	t.Run("Identity. CreatesService", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		mockUserRepo := mocks.NewMockIStorage(ctrl)
+		mockUsers := mocks.NewMockUsersStorage(ctrl)
 
 		config := config.DefaultConfig()
-		identity := NewIdentity(config.Server.JWTSecret, mockUserRepo)
+		identity := NewIdentity(config.Server.JWTSecret, mockUsers)
 		baseService, ok := identity.(*Identity)
 		if !ok {
 			t.Fatalf("Expected *Identity, got: '%T'", identity)
@@ -31,7 +31,7 @@ func TestNewIdentityService(t *testing.T) {
 		if baseService == nil || baseService.JWTAuth == nil {
 			t.Errorf("Expected Identity to be initialized with JWTAuth")
 		}
-		if baseService.Storage != mockUserRepo {
+		if baseService.Storage != mockUsers {
 			t.Errorf("Expected Identity to be initialized with provided storage")
 		}
 	})
@@ -40,7 +40,7 @@ func TestNewIdentityService(t *testing.T) {
 func TestRegisterUser(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStorage := mocks.NewMockIStorage(ctrl)
+	mockUsers := mocks.NewMockUsersStorage(ctrl)
 
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
@@ -56,8 +56,8 @@ func TestRegisterUser(t *testing.T) {
 		{
 			TestName: "Success. Register user #1",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, nil)
-				mockStorage.EXPECT().AddUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockUsers.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, nil)
+				mockUsers.EXPECT().AddUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			ExpectedError: nil,
 			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
@@ -65,7 +65,7 @@ func TestRegisterUser(t *testing.T) {
 		{
 			TestName: "Error. Register user already exists #2",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(&models.UserData{Login: "mda"}, nil)
+				mockUsers.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(&models.UserData{Login: "mda"}, nil)
 			},
 			ExpectedError: ErrUserAlreadyExists,
 			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
@@ -73,8 +73,8 @@ func TestRegisterUser(t *testing.T) {
 		{
 			TestName: "Error. Register user undefined error #3",
 			SetupMocks: func() {
-				mockStorage.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, nil)
-				mockStorage.EXPECT().AddUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("failed to add user"))
+				mockUsers.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, nil)
+				mockUsers.EXPECT().AddUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("failed to add user"))
 			},
 			ExpectedError: errors.New("failed to add user"),
 			User:          models.UserRequest{Login: "mda", Password: "test_pass"},
@@ -85,7 +85,7 @@ func TestRegisterUser(t *testing.T) {
 		t.Run(tc.TestName, func(t *testing.T) {
 			tc.SetupMocks()
 
-			identity := NewIdentity(config.Server.JWTSecret, mockStorage)
+			identity := NewIdentity(config.Server.JWTSecret, mockUsers)
 
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
@@ -106,7 +106,7 @@ func TestRegisterUser(t *testing.T) {
 func TestAuthenticateUser(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockStorage := mocks.NewMockIStorage(ctrl)
+	mockStorage := mocks.NewMockUsersStorage(ctrl)
 
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {

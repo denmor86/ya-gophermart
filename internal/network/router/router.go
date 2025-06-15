@@ -19,12 +19,12 @@ type Router struct {
 	Loyalty   services.LoyaltyService
 }
 
-func NewRouter(config config.Config, storage storage.IStorage) *Router {
+func NewRouter(config config.Config, storage storage.Storage) *Router {
 	return &Router{
 		Config:    config,
-		Indentity: services.NewIdentity(config.Server.JWTSecret, storage),
-		Orders:    services.NewOrders(config.Accrual.AccrualAddr, storage),
-		Loyalty:   services.NewLoyalty(storage),
+		Indentity: services.NewIdentity(config.Server.JWTSecret, storage.Users),
+		Orders:    services.NewOrders(config.Accrual.AccrualAddr, storage.Orders, storage.Users),
+		Loyalty:   services.NewLoyalty(storage.Loyaltys, storage.Users),
 	}
 }
 
