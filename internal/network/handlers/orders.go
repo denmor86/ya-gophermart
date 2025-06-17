@@ -12,6 +12,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/services"
+	"github.com/denmor86/ya-gophermart/internal/validators"
 	"go.uber.org/zap"
 )
 
@@ -39,7 +40,7 @@ func OrdersHandler(o services.OrdersService) http.HandlerFunc {
 
 		orderNumber := strings.TrimSpace(string(body))
 
-		if !helpers.CheckNumber(orderNumber) {
+		if !validators.CheckNumber(orderNumber) {
 			logger.Warn("Invalid order number format", orderNumber)
 			http.Error(w, "Invalid order number format", http.StatusUnprocessableEntity)
 			return

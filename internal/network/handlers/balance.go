@@ -10,6 +10,7 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/services"
+	"github.com/denmor86/ya-gophermart/internal/validators"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
@@ -57,7 +58,7 @@ func WithdrawHandler(l services.LoyaltyService) http.HandlerFunc {
 			http.Error(w, "Invalid request format", http.StatusBadRequest)
 			return
 		}
-		if !helpers.CheckNumber(req.OrderNumber) {
+		if !validators.CheckNumber(req.OrderNumber) {
 			logger.Warn("Invalid order number format", req.OrderNumber)
 			http.Error(w, "Invalid order number format", http.StatusUnprocessableEntity)
 			return
