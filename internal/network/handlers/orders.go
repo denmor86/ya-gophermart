@@ -32,11 +32,6 @@ func OrdersHandler(o services.OrdersService) http.HandlerFunc {
 			http.Error(w, "Invalid body format", http.StatusBadRequest)
 			return
 		}
-		defer func() {
-			if err := r.Body.Close(); err != nil {
-				logger.Error("Error to close body:", zap.Error(err))
-			}
-		}()
 
 		orderNumber := strings.TrimSpace(string(body))
 
