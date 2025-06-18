@@ -7,27 +7,32 @@ import (
 	"testing"
 	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/client"
+	clientMocks "github.com/denmor86/ya-gophermart/internal/client/mocks"
 	"github.com/denmor86/ya-gophermart/internal/config"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
 	"github.com/denmor86/ya-gophermart/internal/storage/mocks"
+	storageMocks "github.com/denmor86/ya-gophermart/internal/storage/mocks"
 	"github.com/google/go-cmp/cmp"
+	"github.com/shopspring/decimal"
 	"go.uber.org/mock/gomock"
 )
 
 func TestOrderService_AddOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockOrders := mocks.NewMockOrdersStorage(ctrl)
-	mockUsers := mocks.NewMockUsersStorage(ctrl)
+	mockOrders := storageMocks.NewMockOrdersStorage(ctrl)
+	mockUsers := storageMocks.NewMockUsersStorage(ctrl)
+	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
 
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	orders := NewOrders(config.Accrual.AccrualAddr, mockOrders, mockUsers)
+	orders := NewOrders(mockAccrual, mockOrders, mockUsers)
 
 	testCases := []struct {
 		TestName      string
@@ -124,13 +129,13 @@ func TestOrderService_GetOrders(t *testing.T) {
 	defer ctrl.Finish()
 	mockOrders := mocks.NewMockOrdersStorage(ctrl)
 	mockUsers := mocks.NewMockUsersStorage(ctrl)
-
+	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	orders := NewOrders(config.Accrual.AccrualAddr, mockOrders, mockUsers)
+	orders := NewOrders(mockAccrual, mockOrders, mockUsers)
 
 	testCases := []struct {
 		Name           string
@@ -190,7 +195,7 @@ func TestOrderService_GetOrders(t *testing.T) {
 			} else if err == nil && tc.ExpectedError != nil {
 				t.Errorf("Expected error, got none")
 			} else if err != nil && err.Error() != tc.ExpectedError.Error() {
-				t.Errorf("Expected error^ '%v', got: '%v'", tc.ExpectedError, err)
+				t.Errorf("Expected error '%v', got: '%v'", tc.ExpectedError, err)
 			}
 			diff := cmp.Diff(tc.ExpectedOrders, orders)
 			if len(diff) != 0 {
@@ -205,13 +210,13 @@ func TestOrderService_ClaimOrdersForProcessing(t *testing.T) {
 	defer ctrl.Finish()
 	mockOrders := mocks.NewMockOrdersStorage(ctrl)
 	mockUsers := mocks.NewMockUsersStorage(ctrl)
-
+	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
 		logger.Panic(err)
 	}
 
-	orders := NewOrders(config.Accrual.AccrualAddr, mockOrders, mockUsers)
+	orders := NewOrders(mockAccrual, mockOrders, mockUsers)
 
 	testCases := []struct {
 		Name                 string
@@ -230,7 +235,7 @@ func TestOrderService_ClaimOrdersForProcessing(t *testing.T) {
 			ExpectedOrderNumbers: nil,
 		},
 		{
-			Name: "Success. #1",
+			Name: "Success. #2",
 			Size: 1,
 			SetupMocks: func() {
 				mockOrders.EXPECT().ClaimOrdersForProcessing(gomock.Any(), gomock.Any()).Return([]string{"123456789", "987654321"}, nil)
@@ -254,11 +259,88 @@ func TestOrderService_ClaimOrdersForProcessing(t *testing.T) {
 			} else if err == nil && tc.ExpectedError != nil {
 				t.Errorf("Expected error, got none")
 			} else if err != nil && err.Error() != tc.ExpectedError.Error() {
-				t.Errorf("Expected error^ '%v', got: '%v'", tc.ExpectedError, err)
+				t.Errorf("Expected error '%v', got: '%v'", tc.ExpectedError, err)
 			}
 			diff := cmp.Diff(tc.ExpectedOrderNumbers, orders)
 			if len(diff) != 0 {
 				t.Errorf("expected order numbers mismatch:\n %s", diff)
+			}
+		})
+	}
+}
+
+func TestOrderService_ProcessOrder(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockOrders := mocks.NewMockOrdersStorage(ctrl)
+	mockUsers := mocks.NewMockUsersStorage(ctrl)
+	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
+	config := config.DefaultConfig()
+	if err := logger.Initialize(config.Server.LogLevel); err != nil {
+		logger.Panic(err)
+	}
+
+	orders := NewOrders(mockAccrual, mockOrders, mockUsers)
+
+	testCases := []struct {
+		Name          string
+		Number        string
+		SetupMocks    func()
+		ExpectedError error
+	}{
+		{
+			Name:   "Error. Order not found #1",
+			Number: "3124124151",
+			SetupMocks: func() {
+				mockAccrual.EXPECT().GetOrderAccrual(gomock.Any(), gomock.Any()).Return(float64(0), models.OrderStatusInvalid, client.ErrOrderNotRegistered)
+				mockOrders.EXPECT().UpdateOrderAndBalance(gomock.Any(), gomock.Any(), models.OrderStatusProcessing, decimal.NewFromFloat(0)).Return(nil)
+			},
+			ExpectedError: nil,
+		},
+		{
+			Name:   "Success. #2",
+			Number: "123456789",
+			SetupMocks: func() {
+				mockAccrual.EXPECT().GetOrderAccrual(gomock.Any(), gomock.Any()).Return(float64(50), models.OrderStatusProcessed, nil)
+				mockOrders.EXPECT().UpdateOrderAndBalance(gomock.Any(), gomock.Any(), models.OrderStatusProcessed, decimal.NewFromFloat(50)).Return(nil)
+			},
+			ExpectedError: nil,
+		},
+		{
+			Name:   "Failed to update order status. #3",
+			Number: "123456789",
+			SetupMocks: func() {
+				mockAccrual.EXPECT().GetOrderAccrual(gomock.Any(), gomock.Any()).Return(float64(0), models.OrderStatusInvalid, nil)
+				mockOrders.EXPECT().UpdateOrderAndBalance(gomock.Any(), gomock.Any(), models.OrderStatusInvalid, decimal.NewFromFloat(0)).Return(fmt.Errorf("failed to update order status: invalid"))
+			},
+			ExpectedError: fmt.Errorf("failed to update order status: invalid"),
+		},
+		{
+			Name:   "Failed to update user balance: . #4",
+			Number: "123456789",
+			SetupMocks: func() {
+				mockAccrual.EXPECT().GetOrderAccrual(gomock.Any(), gomock.Any()).Return(float64(50), models.OrderStatusProcessed, nil)
+				mockOrders.EXPECT().UpdateOrderAndBalance(gomock.Any(), gomock.Any(), models.OrderStatusProcessed, decimal.NewFromFloat(50)).Return(fmt.Errorf("failed to update user balance: user not found"))
+			},
+			ExpectedError: fmt.Errorf("failed to update user balance: user not found"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			tc.SetupMocks()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			err := orders.ProcessOrder(ctx, tc.Number)
+
+			if err != nil && tc.ExpectedError == nil {
+				t.Errorf("Expected no error, got: '%v'", err)
+			} else if err == nil && tc.ExpectedError != nil {
+				t.Errorf("Expected error, got none")
+			} else if err != nil && err.Error() != tc.ExpectedError.Error() {
+				t.Errorf("Expected error '%v', got: '%v'", tc.ExpectedError, err)
 			}
 		})
 	}

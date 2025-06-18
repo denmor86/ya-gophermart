@@ -18,7 +18,7 @@ type Arguments struct {
 	PollInterval           time.Duration `env:"WORKER_POLL_INTERVAL" envDefault:"5s"`
 	ProcessingTimeout      time.Duration `env:"WORKER_PROCESSING_TIMEOUT" envDefault:"10s"`
 	CircuitBreakerTimeout  time.Duration `env:"WORKER_BREAKER_TIMEOUT" envDefault:"30s"`
-	CircuitBreakerFailures uint32        `env:"WORKER_BREAKER_FAILURES" envDefault:"5"`
+	CircuitBreakerFailures int           `env:"WORKER_BREAKER_FAILURES" envDefault:"5"`
 }
 
 // ServerConfig модель настроек сервера
@@ -36,7 +36,7 @@ type AccrualConfig struct {
 	PollInterval           time.Duration
 	ProcessingTimeout      time.Duration
 	CircuitBreakerTimeout  time.Duration
-	CircuitBreakerFailures uint32
+	CircuitBreakerFailures int
 }
 
 // Config модель настроек сервиса

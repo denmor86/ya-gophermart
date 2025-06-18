@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/denmor86/ya-gophermart/internal/client"
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
@@ -30,12 +31,12 @@ type OrdersService interface {
 type Orders struct {
 	OrdersStorage storage.OrdersStorage
 	UsersStorage  storage.UsersStorage
-	Accrual       AccrualService
+	Accrual       client.AccrualService
 }
 
 // Создание сервиса
-func NewOrders(accrualAddr string, orders storage.OrdersStorage, users storage.UsersStorage) OrdersService {
-	return &Orders{OrdersStorage: orders, UsersStorage: users, Accrual: NewAccrual(accrualAddr)}
+func NewOrders(accrual client.AccrualService, orders storage.OrdersStorage, users storage.UsersStorage) OrdersService {
+	return &Orders{OrdersStorage: orders, UsersStorage: users, Accrual: accrual}
 }
 
 // AddOrder - добавляет новый заказ, проверяя, не был ли он уже добавлен другим пользователем.

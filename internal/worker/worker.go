@@ -29,7 +29,7 @@ func NewOrderWorker(orders services.OrdersService, config config.AccrualConfig) 
 			Name:    "accrual-service",
 			Timeout: config.CircuitBreakerTimeout,
 			ReadyToTrip: func(counts gobreaker.Counts) bool {
-				return counts.ConsecutiveFailures >= config.CircuitBreakerFailures
+				return counts.ConsecutiveFailures >= uint32(config.CircuitBreakerFailures)
 			},
 			OnStateChange: func(name string, from, to gobreaker.State) {
 				logger.Info("Circuit Breaker '%s': %s → %s", name, from, to)

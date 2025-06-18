@@ -23,7 +23,7 @@ func NewRouter(config config.Config, storage storage.Storage) *Router {
 	return &Router{
 		Config:    config,
 		Indentity: services.NewIdentity(config.Server.JWTSecret, storage.Users),
-		Orders:    services.NewOrders(config.Accrual.AccrualAddr, storage.Orders, storage.Users),
+		Orders:    services.NewOrders(services.NewAccrualService(config.Accrual.AccrualAddr), storage.Orders, storage.Users),
 		Loyalty:   services.NewLoyalty(storage.Loyaltys, storage.Users),
 	}
 }
