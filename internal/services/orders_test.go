@@ -13,7 +13,6 @@ import (
 	"github.com/denmor86/ya-gophermart/internal/logger"
 	"github.com/denmor86/ya-gophermart/internal/models"
 	"github.com/denmor86/ya-gophermart/internal/storage"
-	"github.com/denmor86/ya-gophermart/internal/storage/mocks"
 	storageMocks "github.com/denmor86/ya-gophermart/internal/storage/mocks"
 	"github.com/google/go-cmp/cmp"
 	"github.com/shopspring/decimal"
@@ -127,8 +126,8 @@ func TestOrderService_AddOrder(t *testing.T) {
 func TestOrderService_GetOrders(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockOrders := mocks.NewMockOrdersStorage(ctrl)
-	mockUsers := mocks.NewMockUsersStorage(ctrl)
+	mockOrders := storageMocks.NewMockOrdersStorage(ctrl)
+	mockUsers := storageMocks.NewMockUsersStorage(ctrl)
 	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
@@ -208,8 +207,8 @@ func TestOrderService_GetOrders(t *testing.T) {
 func TestOrderService_ClaimOrdersForProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockOrders := mocks.NewMockOrdersStorage(ctrl)
-	mockUsers := mocks.NewMockUsersStorage(ctrl)
+	mockOrders := storageMocks.NewMockOrdersStorage(ctrl)
+	mockUsers := storageMocks.NewMockUsersStorage(ctrl)
 	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
@@ -272,8 +271,8 @@ func TestOrderService_ClaimOrdersForProcessing(t *testing.T) {
 func TestOrderService_ProcessOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockOrders := mocks.NewMockOrdersStorage(ctrl)
-	mockUsers := mocks.NewMockUsersStorage(ctrl)
+	mockOrders := storageMocks.NewMockOrdersStorage(ctrl)
+	mockUsers := storageMocks.NewMockUsersStorage(ctrl)
 	mockAccrual := clientMocks.NewMockAccrualService(ctrl)
 	config := config.DefaultConfig()
 	if err := logger.Initialize(config.Server.LogLevel); err != nil {
